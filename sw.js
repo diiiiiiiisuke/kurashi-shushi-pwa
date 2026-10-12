@@ -1,6 +1,13 @@
 // アプリのファイルを変更したら CACHE の番号を必ず上げる（古いキャッシュが残るのを防ぐ）
-const CACHE = "kurashi-shushi-v4";
-const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
+const CACHE = "kurashi-shushi-v5";
+// js/ にファイルを追加・削除したらここも更新する（scripts/check.sh が確認する）
+const ASSETS = [
+  "./", "./index.html", "./styles.css", "./manifest.webmanifest", "./icon.svg",
+  "./js/main.js", "./js/util.js", "./js/store.js",
+  "./js/calc/debt.js", "./js/calc/simulation.js", "./js/calc/summary.js",
+  "./js/ui/common.js", "./js/ui/chart.js", "./js/ui/forms.js",
+  "./js/ui/home.js", "./js/ui/records.js", "./js/ui/analysis.js", "./js/ui/debts.js", "./js/ui/settings.js",
+];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

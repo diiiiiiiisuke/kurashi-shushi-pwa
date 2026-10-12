@@ -1,57 +1,62 @@
-# 設計
+# 設計（v2）
 
-## 全体
+仕様の詳細・計算の根拠は [spec-v2.md](spec-v2.md)。ここは「今のコードがどう動いているか」の地図。
 
-- 静的ファイルのみ。`index.html` が `app.js` と `styles.css` を読み込む
-- `app.js` はグローバル変数 `state` に全データを持ち、`save()` で `localStorage` に保存して `render()` で画面全体を描き直す
-- 入力はすべて1つの `<dialog id="entryDialog">` を使い回す。`openForm(kind, existing)` が `kind` に応じてフォーム項目を生成し、送信時に `kind` ごとに `state` を更新する
-- ボタンの動作は `data-*` 属性で判定する（`data-view` / `data-open` / `data-edit-transaction` / `data-delete-*`）
+## 全体の流れ
+
+```
+index.html ──> js/main.js
+                 ├─ store.load()            localStorage を読み、v1 なら migrate() して保存
+                 ├─ generateRecurring()     定期取引の未作成分を記録に追加
+                 ├─ render()                今のタブの render 関数で #view を描き直す
+                 └─ イベント委任
+                      click  [data-view]    タブ切り替え
+                      click  [data-action]  actions[...]（入力シートを開く・月の移動など）
+                      input  [data-filter]  記録の絞り込み（リストだけ描き直す）
+                      input  [data-sim]     シミュレーション条件（結果だけ描き直す）
+```
+
+- 状態は `app.state`（保存されるデータ）と `app.ctx`（表示中のタブ・月・絞り込みなど保存しないもの）
+- 状態を変えたら `app.commit()`。定期取引の作成 → 保存 → 再描画を行う
+- 入力はすべて `<dialog id="sheet">`。`js/ui/forms.js` の `openSheet(app, kind, opts)` が kind（tx / category / account / budget / recurring / debt / rebase）ごとにフォームを作る。各 kind は `title / html / onInput / submit / remove` を持つ
+- グラフは `js/ui/chart.js`（canvas、ライブラリなし）。描画は `render` の後の `after` で行う
 
 ## 画面（タブ）
 
-| タブ | section id | 内容 |
+| タブ | ファイル | 主な内容 |
 | --- | --- | --- |
-| ホーム | `dashboard` | 月の収入・支出・収支・残債、予算、支払予定、事業の売上、支出グラフ、返済シミュレーション |
-| 収支 | `transactions` | 表示中の月の取引を日付ごとに表示。編集・削除 |
-| 返済 | `debts` | 返済先カード |
-| 設定 | `settings` | 支払カード、バックアップ |
+| ホーム | `ui/home.js` | 今月の収入・支出・収支・今日の支出、予算の残り、次の支払予定、完済の見通し、最近の記録、バックアップ警告 |
+| 記録 | `ui/records.js` | 表示月の記録を日付ごとに。検索・カテゴリ・個人/事業の絞り込み。タップで編集 |
+| 分析 | `ui/analysis.js` | 12か月推移、カテゴリ別（前月比）、固定費/変動費、個人/事業、返済のうち利息 |
+| 返済 | `ui/debts.js` | 残債サマリー、返済先カード、シミュレーション比較、返済先の詳細（予定表・返済履歴） |
+| 設定 | `ui/settings.js` | バックアップ、支払方法、予算、定期取引、カテゴリ |
+| ＋ボタン | `ui/forms.js`（tx） | クイック入力。返済カテゴリを選ぶと返済先・元金・利息の欄が出る |
 
-月の切り替え（`.month-control`）はホームと収支タブで共通。表示月は `shownMonth`。
+## データモデル（schemaVersion 2）
 
-## データモデル
+`localStorage["kurashi-shushi-data-v1"]`（キー名は v1 のまま）。バックアップファイルも同じ形式。項目の意味は [spec-v2.md 3章](spec-v2.md#3-データモデルschemaversion-2)。
 
-`localStorage["kurashi-shushi-data-v1"]` に次のJSONを保存する。バックアップファイルも同じ形式。
+| キー | 中身 |
+| --- | --- |
+| `transactions` | 記録。`categoryId`・`accountId` で参照。返済は `debtId`・`principal`・`interest` を持つ |
+| `categories` | カテゴリ。削除せず `archived` で非表示にする（過去の記録を壊さない） |
+| `accounts` | 支払方法。`id: "cash"` の「現金・口座」は必ずある |
+| `budgets` | `{ categoryId, amount }` |
+| `recurring` | 定期取引。`lastGeneratedMonth` まで作成済み |
+| `debts` | 返済先。**現在残高は保存しない**（`baseBalance` − `baseDate` 以降の返済記録の `principal`） |
+| `settings` | `repaymentBudget`・`strategy`・`lastBackupAt`・`lastAccountId` |
 
-```js
-{
-  transactions: [{
-    id: "uuid",
-    date: "YYYY-MM-DD",          // 端末のローカル日付
-    type: "income" | "expense",
-    scope: "personal" | "business",
-    category: "食費",             // 自由入力
-    paymentMethod: "cash" | "<cards[].id>",
-    amount: 1200,                 // 円・正の整数
-    description: "スーパー"
-  }],
-  debts: [{
-    id, name, kind: "クレジットカード" | "カードローン" | "分割払い" | "その他",
-    balance: 0,                   // 現在残高
-    payment: 0,                   // 毎月の返済予定
-    dueDay: 0,                    // 支払日（0 = 未設定）
-    apr: null | 15.0              // 年利%
-  }],
-  cards: [{ id, name, closingDay: 0, paymentDay: 0 }],
-  budgets: [{ category: "食費", amount: 30000 }],   // カテゴリ名がキー
-  settings: { monthlyRepayment: 115000, annualRate: 18 }
-}
-```
+- v1 のデータは初回起動時に `migrate()` で変換し、元データを `kurashi-shushi-data-v1-backup` に1回だけ退避する
+- 形式を変えるときは `SCHEMA_VERSION` を上げて `migrate()` に変換を追加する
 
-- `load()` は `defaultState()` に保存データを上書きマージするので、トップレベルのキー追加は互換性を保てる
-- 形式を変えるときはキー名のバージョンを上げずに `load()` でマイグレーションする方針（[decisions.md](decisions.md)）
+## 計算（`js/calc/`、テストは `tests/`）
+
+- `debt.js`: 現在残高、返済額の利息/元金分割（利息 = floor(残高 × 年利 / 12)）、残り回数、1回目の返済月
+- `simulation.js`: `simulateAll(items, budget, strategy, startMonth)` で全返済先を月ごとに計算。最低返済額 → 余りを作戦順に上乗せ → 完済した分は翌月から余りに回る。`schedule()` は1件の返済予定表
+- `summary.js`: 月の集計、カテゴリ別、予算消化、12か月推移、固定費/変動費、カテゴリ使用回数
 
 ## Service Worker（`sw.js`）
 
 - ネットワーク優先で、取得したものをキャッシュに保存。オフライン時はキャッシュを返す
-- `CACHE` 名を変えると、activate 時に古いキャッシュを削除する
-- **アプリのファイルを変更したら `CACHE` の番号を上げる**
+- `CACHE` 名を変えると古いキャッシュを削除する。**アプリのファイルを変えたら番号を上げる**
+- `ASSETS` に全ファイルを列挙する（`scripts/check.sh` が過不足を検出）

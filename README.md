@@ -1,6 +1,6 @@
 # くらし収支
 
-スマホで毎日の家計簿、自分の収支状況（個人・事業）、カード・ローンの返済状況を管理する、依存関係のないPWAです。
+スマホで毎日の家計簿、自分の収支状況（個人・事業）、カード・ローンの返済とシミュレーションを管理する、依存関係のないPWAです。
 
 - アプリ: https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/
 - 開発する人・AIエージェントは、まず [AGENTS.md](AGENTS.md) と [docs/](docs/README.md) を読んでください
@@ -16,7 +16,7 @@
 
 ```sh
 python3 -m http.server 8000   # http://localhost:8000 で確認
-bash scripts/check.sh         # コミット前のチェック
+bash scripts/check.sh         # コミット前のチェック（構文・自動テスト・データ混入）
 ```
 
 アプリのファイルを変更したら `sw.js` の `CACHE` の番号を上げてください。

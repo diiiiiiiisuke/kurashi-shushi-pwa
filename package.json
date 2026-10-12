@@ -1,0 +1,10 @@
+{
+  "name": "kurashi-shushi-pwa",
+  "private": true,
+  "description": "依存パッケージなし。js/ 以下を ES Modules として Node のテストから読むためだけのファイル",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "bash scripts/check.sh"
+  }
+}

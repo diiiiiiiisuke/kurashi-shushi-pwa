@@ -2,43 +2,45 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#123747" />
     <!-- 外部への通信・外部スクリプトを禁止する（家計データの流出防止）。変更する場合は docs/security.md を参照 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
     <meta name="referrer" content="no-referrer" />
-    <meta name="description" content="毎日の家計・事業収支・返済状況をスマホで確認するPWA" />
+    <meta name="description" content="毎日の家計簿・収支・返済シミュレーションをスマホで管理するPWA" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="くらし収支" />
     <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
     <link rel="stylesheet" href="styles.css" />
     <title>くらし収支</title>
   </head>
   <body>
     <header class="topbar">
       <div><p class="eyebrow">PERSONAL FINANCE</p><h1>くらし収支</h1></div>
-      <button id="install" class="secondary" hidden>アプリを追加</button>
+      <button id="install" class="secondary" type="button" hidden>アプリを追加</button>
     </header>
     <main>
-      <div class="month-control"><button id="previousMonth" aria-label="前月">‹</button><h2 id="monthLabel"></h2><button id="nextMonth" aria-label="翌月">›</button></div>
-      <section id="dashboard" class="view active">
-        <div class="summary-grid">
-          <article class="metric income"><span>今月の収入</span><strong id="monthIncome">¥0</strong></article>
-          <article class="metric expense"><span>今月の支出</span><strong id="monthExpense">¥0</strong></article>
-          <article class="metric balance"><span>今月の収支</span><strong id="monthBalance">¥0</strong></article>
-          <article class="metric debt"><span>登録残債</span><strong id="totalDebt">¥0</strong></article>
-        </div>
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">BUDGET</p><h2>今月の予算</h2></div><button data-open="budget" class="text-button">設定</button></div><div id="budgetProgress"></div></section>
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">NEXT</p><h2>支払予定</h2></div><button data-open="debt" class="text-button">返済を追加</button></div><div id="upcomingPayments" class="list empty">登録がありません</div></section>
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">BUSINESS</p><h2>事業の売上</h2></div><button data-open="transaction" class="text-button">売上を追加</button></div><div id="businessSummary" class="business-summary"></div></section>
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">SPENDING</p><h2>支出の内訳</h2></div></div><canvas id="expenseChart" width="680" height="250" aria-label="今月の支出カテゴリ別グラフ"></canvas><div id="expenseLegend" class="legend"></div></section>
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">PLAN</p><h2>返済シミュレーション</h2></div><button data-open="simulation" class="text-button">条件を設定</button></div><p id="simulationText" class="simulation-text"></p><div id="simulationBars" class="simulation-bars"></div></section>
-      </section>
-
-      <section id="transactions" class="view"><div class="section-heading"><div><p class="eyebrow">DAILY LOG</p><h2>収支履歴</h2></div><button data-open="transaction" class="primary">＋ 入力</button></div><div id="transactionList" class="list empty">まだ取引がありません</div></section>
-      <section id="debts" class="view"><div class="section-heading"><div><p class="eyebrow">REPAYMENT</p><h2>返済管理</h2></div><button data-open="debt" class="primary">＋ 返済先</button></div><div id="debtList" class="debt-grid empty">返済先がありません</div></section>
-      <section id="settings" class="view"><p class="eyebrow">SETTINGS</p><h2>設定とバックアップ</h2><div class="panel"><div class="section-heading"><h3>支払カード</h3><button data-open="card" class="text-button">＋ カードを登録</button></div><div id="cardList" class="list empty">カードがありません</div></div><div class="panel"><h3>このアプリについて</h3><p>データはこの端末・ブラウザ内に保存されます。GitHubにはアプリのコードだけを置き、家計データは送信しません。</p></div><div class="panel"><h3>データの移行</h3><p>端末変更前にエクスポートし、新しい端末でインポートしてください。</p><div class="button-row"><button id="exportData" class="secondary">データを書き出す</button><label class="secondary file-label">データを読み込む<input id="importData" type="file" accept="application/json" /></label></div></div><div class="panel"><h3>最初に登録する項目</h3><ol><li>給料・副業などの定期収入</li><li>家賃以外の固定費と生活費の予算</li><li>カード・ローンごとの最新残高と支払日</li><li>支払いに使うカード</li><li>事業売上と経費</li></ol></div></section>
+      <div class="month-control" id="monthControl">
+        <button type="button" data-action="prev-month" aria-label="前の月">‹</button>
+        <h2 id="monthLabel" aria-live="polite"></h2>
+        <button type="button" data-action="next-month" aria-label="次の月">›</button>
+      </div>
+      <div id="view"></div>
     </main>
-    <nav><button data-view="dashboard" class="selected">ホーム</button><button data-view="transactions">収支</button><button data-view="debts">返済</button><button data-view="settings">設定</button></nav>
-    <dialog id="entryDialog"><form id="entryForm" method="dialog"><div class="dialog-heading"><h2 id="dialogTitle"></h2><button type="button" class="icon-button" data-close>×</button></div><div id="formFields"></div><div class="button-row"><button type="button" class="secondary" data-close>キャンセル</button><button class="primary" value="submit">保存</button></div></form></dialog>
-    <script src="app.js"></script>
+    <button type="button" class="fab" data-action="new-tx" aria-label="記録を追加">＋</button>
+    <nav aria-label="メインメニュー">
+      <button type="button" data-view="home">ホーム</button>
+      <button type="button" data-view="records">記録</button>
+      <button type="button" data-view="analysis">分析</button>
+      <button type="button" data-view="debts">返済</button>
+      <button type="button" data-view="settings">設定</button>
+    </nav>
+    <dialog id="sheet"><form id="sheetForm" novalidate></form></dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <input id="importFile" type="file" accept="application/json,.json" hidden />
+    <noscript>JavaScript を有効にしてください。</noscript>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>
