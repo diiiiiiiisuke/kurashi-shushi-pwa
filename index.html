@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#123747" />
+    <meta name="description" content="毎日の家計・事業収支・返済状況をスマホで確認するPWA" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>くらし収支</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div><p class="eyebrow">PERSONAL FINANCE</p><h1>くらし収支</h1></div>
+      <button id="install" class="secondary" hidden>アプリを追加</button>
+    </header>
+    <main>
+      <section id="dashboard" class="view active">
+        <div class="month-control"><button id="previousMonth" aria-label="前月">‹</button><h2 id="monthLabel"></h2><button id="nextMonth" aria-label="翌月">›</button></div>
+        <div class="summary-grid">
+          <article class="metric income"><span>今月の収入</span><strong id="monthIncome">¥0</strong></article>
+          <article class="metric expense"><span>今月の支出</span><strong id="monthExpense">¥0</strong></article>
+          <article class="metric balance"><span>今月の収支</span><strong id="monthBalance">¥0</strong></article>
+          <article class="metric debt"><span>登録残債</span><strong id="totalDebt">¥0</strong></article>
+        </div>
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">BUDGET</p><h2>今月の予算</h2></div><button data-open="budget" class="text-button">設定</button></div><div id="budgetProgress"></div></section>
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">NEXT</p><h2>支払予定</h2></div><button data-open="debt" class="text-button">返済を追加</button></div><div id="upcomingPayments" class="list empty">登録がありません</div></section>
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">BUSINESS</p><h2>事業の売上</h2></div><button data-open="transaction" class="text-button">売上を追加</button></div><div id="businessSummary" class="business-summary"></div></section>
+      </section>
+
+      <section id="transactions" class="view"><div class="section-heading"><div><p class="eyebrow">DAILY LOG</p><h2>収支履歴</h2></div><button data-open="transaction" class="primary">＋ 入力</button></div><div id="transactionList" class="list empty">まだ取引がありません</div></section>
+      <section id="debts" class="view"><div class="section-heading"><div><p class="eyebrow">REPAYMENT</p><h2>返済管理</h2></div><button data-open="debt" class="primary">＋ 返済先</button></div><div id="debtList" class="debt-grid empty">返済先がありません</div></section>
+      <section id="settings" class="view"><p class="eyebrow">SETTINGS</p><h2>設定とバックアップ</h2><div class="panel"><h3>このアプリについて</h3><p>データはこの端末・ブラウザ内に保存されます。GitHubにはアプリのコードだけを置き、家計データは送信しません。</p></div><div class="panel"><h3>データの移行</h3><p>端末変更前にエクスポートし、新しい端末でインポートしてください。</p><div class="button-row"><button id="exportData" class="secondary">データを書き出す</button><label class="secondary file-label">データを読み込む<input id="importData" type="file" accept="application/json" /></label></div></div><div class="panel"><h3>最初に登録する項目</h3><ol><li>給料・副業などの定期収入</li><li>家賃以外の固定費と生活費の予算</li><li>カード・ローンごとの最新残高と支払日</li><li>事業売上と経費</li></ol></div></section>
+    </main>
+    <nav><button data-view="dashboard" class="selected">ホーム</button><button data-view="transactions">収支</button><button data-view="debts">返済</button><button data-view="settings">設定</button></nav>
+    <dialog id="entryDialog"><form id="entryForm" method="dialog"><div class="dialog-heading"><h2 id="dialogTitle"></h2><button type="button" class="icon-button" data-close>×</button></div><div id="formFields"></div><div class="button-row"><button type="button" class="secondary" data-close>キャンセル</button><button class="primary" value="submit">保存</button></div></form></dialog>
+    <script src="app.js"></script>
+  </body>
+</html>

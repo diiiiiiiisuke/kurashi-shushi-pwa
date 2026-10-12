@@ -1,0 +1,4 @@
+# 家計データやエクスポートはGitHubに保存しない
+*.backup.json
+private-data/
+.DS_Store
