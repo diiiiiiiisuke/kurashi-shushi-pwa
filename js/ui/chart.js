@@ -147,4 +147,67 @@ export function drawSpeed(canvas, rows) {
   ctx.fillStyle = "#d9730d"; pts.forEach(([px, py]) => { ctx.beginPath(); ctx.arc(px, py, 3.5, 0, 7); ctx.fill(); });
 }
 
+/**
+ * 収支（棒）と残りの残債（折れ線）。左＝収支、右＝残債。今月より後は背景を塗り、残債は点線（docs/spec-v4.md 3章）
+ * o: buildOverview() の戻り値、mode: "both"（収入と支出）| "net"（収支）
+ */
+export function drawOverview(canvas, o, labels, mode = "both") {
+  const { ctx, w, h } = setup(canvas, 250);
+  const pad = { l: 40, r: 40, t: 16, b: 26 };
+  const rows = o.rows, n = rows.length;
+  const step = (w - pad.l - pad.r) / n;
+  const x = i => pad.l + step * (i + 0.5);
+  const vals = mode === "net" ? rows.map(r => r.balance) : rows.flatMap(r => [r.income, r.expense]);
+  const maxV = Math.max(1, ...vals) * 1.1, minV = Math.min(0, ...vals) * 1.1;
+  const yV = v => pad.t + (h - pad.t - pad.b) * (maxV - v) / (maxV - minV);
+  const debts = rows.map(r => r.debt).filter(v => v != null);
+  const maxD = Math.max(1, ...debts) * 1.08;
+  const yD = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxD);
+  const nowX = x(o.nowIndex) + step / 2;
+
+  ctx.fillStyle = "#eef5f5"; ctx.fillRect(nowX, pad.t, w - pad.r - nowX, h - pad.t - pad.b);
+  ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
+  for (const f of [0, 0.5, 1]) {
+    const yy = pad.t + (h - pad.t - pad.b) * (1 - f);
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(w - pad.r, yy); ctx.stroke();
+    ctx.fillStyle = COLORS.text; ctx.textAlign = "right"; ctx.fillText(man(minV + (maxV - minV) * f), pad.l - 4, yy + 4);
+    if (debts.length) { ctx.textAlign = "left"; ctx.fillText(man(maxD * f), w - pad.r + 4, yy + 4); }
+  }
+  if (minV < 0) { ctx.strokeStyle = "#9aa8ad"; ctx.beginPath(); ctx.moveTo(pad.l, yV(0)); ctx.lineTo(w - pad.r, yV(0)); ctx.stroke(); }
+
+  // 棒（収支）。未来の月は記録がないので空
+  const bw = Math.max(2, Math.min(14, step * (mode === "net" ? 0.55 : 0.32)));
+  rows.forEach((r, i) => {
+    if (mode === "net") {
+      if (!r.balance) return;
+      ctx.fillStyle = r.balance >= 0 ? COLORS.income : COLORS.expense;
+      const top = yV(Math.max(0, r.balance)), bot = yV(Math.min(0, r.balance));
+      ctx.fillRect(x(i) - bw / 2, top, bw, Math.max(1, bot - top));
+    } else {
+      if (r.income) { ctx.fillStyle = COLORS.income; ctx.fillRect(x(i) - bw - 1, yV(r.income), bw, yV(0) - yV(r.income)); }
+      if (r.expense) { ctx.fillStyle = COLORS.expense; ctx.fillRect(x(i) + 1, yV(r.expense), bw, yV(0) - yV(r.expense)); }
+    }
+  });
+
+  // 折れ線（残債）: 今月までは実線、今月から先は点線
+  const pts = rows.map((r, i) => (r.debt == null ? null : [x(i), yD(r.debt), r.future, i]));
+  const pastPts = pts.filter(p => p && p[3] <= o.nowIndex);
+  const futPts = pts.filter(p => p && p[3] >= o.nowIndex);
+  line(ctx, pastPts, COLORS.balance, 3, false);
+  line(ctx, futPts, COLORS.balance, 2.5, true);
+  for (const p of pts) if (p) { ctx.fillStyle = p[2] ? "#fff" : COLORS.balance; ctx.strokeStyle = COLORS.balance; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p[0], p[1], 3, 0, 7); ctx.fill(); ctx.stroke(); }
+
+  // 「今月」の区切りとラベル
+  ctx.strokeStyle = COLORS.balance; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(nowX, pad.t); ctx.lineTo(nowX, h - pad.b); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = COLORS.text; ctx.textAlign = "left"; ctx.fillText("予測 →", nowX + 5, pad.t + 12);
+  // 月のラベル: 今月は必ず太字で出し、ほかは今月・隣のラベルと重ならないものだけ
+  ctx.textAlign = "center";
+  const nowLX = x(o.nowIndex);
+  ctx.fillStyle = COLORS.balance; ctx.font = "bold 11px -apple-system, sans-serif"; ctx.fillText(labels[o.nowIndex], nowLX, h - 8);
+  ctx.fillStyle = COLORS.text; ctx.font = "11px -apple-system, sans-serif";
+  let lastX = -99;
+  rows.forEach((r, i) => { if (i !== o.nowIndex && Math.abs(x(i) - nowLX) >= 42 && x(i) - lastX >= 42) { ctx.fillText(labels[i], x(i), h - 8); lastX = x(i); } });
+  ctx.font = "11px -apple-system, sans-serif";
+}
+
 export { COLORS };

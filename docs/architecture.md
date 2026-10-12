@@ -1,6 +1,6 @@
-# 設計（v3）
+# 設計（v4）
 
-仕様の詳細・計算の根拠は [spec-v2.md](spec-v2.md)・[spec-v3.md](spec-v3.md)。ここは「今のコードがどう動いているか」の地図。
+仕様の詳細・計算の根拠は [spec-v2.md](spec-v2.md)・[spec-v3.md](spec-v3.md)・[spec-v4.md](spec-v4.md)。ここは「今のコードがどう動いているか」の地図。
 
 ## 全体の流れ
 
@@ -25,11 +25,11 @@ index.html ──> js/main.js
 
 | タブ | ファイル | 主な内容 |
 | --- | --- | --- |
-| ホーム | `ui/home.js` | 今月の収入・支出・収支・今日の支出、予算の残り、次の支払予定、完済の見通し、最近の記録、バックアップ警告 |
+| ホーム | `ui/home.js` | 今月の収入・支出・収支・今日の支出、収支と返済のグラフ（`ui/overview.js`）、予算の残り、次の支払予定、完済の見通し、最近の記録、バックアップ警告 |
 | 記録（家計簿DB） | `ui/records.js` | Notion風の表。プルダウンでビュー切替（毎日の家計簿／月次の管理／カード別／カテゴリ別／テーブル）。選んだビューは `settings.recordsView` に保存。検索・絞り込み・並び替え。行タップで編集 |
-| 分析 | `ui/analysis.js` | 12か月推移、支払方法別の支出（`ui/breakdown.js` の積み上げ棒）、カテゴリ別（前月比）、固定費/変動費、個人/事業、返済のうち利息 |
+| 分析 | `ui/analysis.js` | 収支と返済のグラフ（`ui/overview.js`）、12か月推移、支払方法別の支出（`ui/breakdown.js` の積み上げ棒）、カテゴリ別（前月比）、固定費/変動費、個人/事業、返済のうち利息 |
 | 返済 | `ui/debts.js` | 残債サマリー、返済先カード、シミュレーション比較、残債の推移グラフ（実績＝実線・予測＝点線、返済スピード別）、返済スピードの比較グラフ、返済先の詳細（推移グラフ・予定表・返済履歴） |
-| 設定 | `ui/settings.js` | バックアップ、支払方法、予算、定期取引、カテゴリ |
+| 設定 | `ui/settings.js` | バックアップ、支払方法（今月の利用額・↑↓並べ替え・📋まとめて追加・未使用なら削除/使用中なら非表示）、予算、定期取引、カテゴリ |
 | ＋ボタン | `ui/forms.js`（tx） | クイック入力。返済カテゴリを選ぶと返済先・元金・利息の欄が出る |
 
 ## データモデル（schemaVersion 2）
@@ -56,6 +56,8 @@ index.html ──> js/main.js
 - `summary.js`: 月の集計、カテゴリ別、予算消化、12か月推移、固定費/変動費、カテゴリ使用回数、支払方法別（`byAccount`）、月次の行（`monthlyRows`）
 - `projection.js`: `buildProjection()` 残債の実績（`balanceAt` で月末残高を逆算）＋返済スピード別の予測、`speedTable()` 毎月の額ごとの完済月数・利息
 - グラフ: `ui/chart.js` の `drawProjection()`（過去に最低1/4の幅を割り当てる）、`drawSpeed()`、`drawTrend()`
+- `accounts.js`: `parseAccountNames()`（貼り付けた Notion の列・表から名前を取り出す）、`accountUsage()`、`moveAccount()`
+- `projection.js` の `buildOverview()`: 収支と返済のグラフ用（過去は実績、今月以降の残債は予測）。描画は `ui/chart.js` の `drawOverview()`
 - タグの色: `ui/common.js` の `tagColor()`（名前から Notion の9色を決める）
 
 ## Service Worker（`sw.js`）

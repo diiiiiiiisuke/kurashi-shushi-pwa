@@ -235,3 +235,19 @@ tr.selected td { background: var(--pale); font-weight: 700; }
 .g-sum { float: none; margin-left: 2px; }
 table.db { min-width: 520px; }
 table.db .c-title { max-width: 8.5em; }
+
+/* ───────── v4: 支払方法の管理・収支と返済（docs/spec-v4.md） ───────── */
+.acc-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); }
+.acc-row .list-item { border-bottom: 0; flex: 1; min-width: 0; }
+.move { display: flex; flex-direction: column; gap: 2px; }
+.move-gap { width: 30px; flex: none; }
+.icon-mini { width: 30px; height: 22px; border: 1px solid var(--line); background: #fff; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; padding: 0; }
+.icon-mini:disabled { opacity: .3; cursor: default; }
+.field textarea { width: 100%; padding: 11px; border: 1px solid #bfcfd1; border-radius: 9px; font: inherit; font-size: 16px; resize: vertical; }
+.bulk-preview p { font-size: 13px; margin: 6px 0; }
+.bulk-tags { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow: auto; }
+.overview-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.overview-controls select { width: 100%; padding: 9px; border: 1px solid var(--db-line); border-radius: 8px; background: #fff; font-size: 16px; }
+.overview-metrics { margin-top: 12px; }
+.overview-metrics .metric strong { font-size: 16px; }
+.list-item > .muted { white-space: nowrap; flex: none; }

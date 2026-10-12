@@ -4,6 +4,7 @@ import { monthTotals, budgetUsage } from "../calc/summary.js";
 import { simulateAll, regularPayment } from "../calc/simulation.js";
 import { toSimItem, firstPaymentMonth, monthlyInterest } from "../calc/debt.js";
 import { h, panel, metric, bar, emptyNote, categoryName, txRow } from "./common.js";
+import { renderOverview } from "./overview.js";
 
 // 次の支払予定（返済と、まだ記録されていない定期の支出）
 export function upcoming(state, today, limit = 3) {
@@ -53,6 +54,8 @@ export function renderHome(app) {
     ${metric("収支", signed(t.balance), t.balance >= 0 ? "income" : "expense")}
     ${isThisMonth ? metric("今日の支出", fmt(todayExpense)) : ""}
   </div>`);
+
+  if (state.transactions.length || state.debts.length) out.push(renderOverview(app));
 
   const budgets = budgetUsage(state, ym).sort((a, b) => b.ratio - a.ratio).slice(0, 5);
   out.push(panel("予算の残り", budgets.length ? budgets.map(b => `<div class="budget-row">
