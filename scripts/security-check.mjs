@@ -45,6 +45,13 @@ export function scan(files) {
   for (const h of ["X-Content-Type-Options: nosniff", "X-Frame-Options: DENY", "Referrer-Policy: no-referrer"]) if (!headers.includes(h)) problems.push(`_headers: ${h} がありません`);
   if (/Access-Control-Allow-Origin/i.test(headers)) problems.push("_headers: Access-Control-Allow-Origin（他サイトからの読み取り許可）は使えません");
 
+  // Cloudflare Workers の設定（wrangler.jsonc）: 静的ファイルを配るだけで、サーバー側のコード・外部サービスとの接続を持たない
+  const wr = (files["wrangler.jsonc"] ?? "").replace(/^\s*\/\/.*$/gm, "");
+  if (!/"directory"\s*:\s*"\.\/dist"/.test(wr)) problems.push("wrangler.jsonc: assets.directory は ./dist にしてください");
+  for (const key of ["main", "routes", "route", "kv_namespaces", "d1_databases", "r2_buckets", "services", "durable_objects", "queues", "vars", "ai", "analytics_engine_datasets", "tail_consumers"]) {
+    if (new RegExp(`"${key}"\\s*:`).test(wr)) problems.push(`wrangler.jsonc: "${key}" は使えません（サーバー側のコードや外部サービスとの接続を追加しない）`);
+  }
+
   for (const [path, src] of Object.entries(files)) {
     if (!/^js\/.*\.js$/.test(path) && path !== "sw.js") continue;
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
@@ -68,7 +75,7 @@ export function scan(files) {
 
 export function readRepo(root = ".") {
   const files = {};
-  for (const p of ["index.html", "sw.js", "manifest.webmanifest", "_headers"]) files[p] = readFileSync(join(root, p), "utf8");
+  for (const p of ["index.html", "sw.js", "manifest.webmanifest", "_headers", "wrangler.jsonc"]) files[p] = readFileSync(join(root, p), "utf8");
   for (const p of walk(join(root, "js"))) files[p.slice(root === "." ? 0 : root.length + 1)] = readFileSync(p, "utf8");
   for (const p of walk(join(root, ".github/workflows"))) files[p.slice(root === "." ? 0 : root.length + 1)] = readFileSync(p, "utf8");
   return files;

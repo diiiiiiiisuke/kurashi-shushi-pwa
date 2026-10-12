@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-12 Claude Code — Cloudflare のビルド失敗を修正（Workers 対応）
+
+- オーナーが Cloudflare で作成したのが Pages ではなく **Workers**（現在の標準）だったため、設定ファイルがなくビルドが失敗していた
+- `wrangler.jsonc` を追加（Worker 名 `kurashi-shushi-pwa`、`build.command` で `scripts/build-site.sh`、`assets.directory` は `./dist`、サーバー側のコードなし）
+- `security-check.mjs` に `wrangler.jsonc` の検査（`main`・KV・D1 などの追加を禁止、公開フォルダは `./dist`）とテストを追加
+- 検証: `npx wrangler@4 deploy --dry-run` でビルド〜アップロード準備まで成功（実際の送信なし）、`bash scripts/check.sh` 成功
+- `docs/deploy.md`・`AGENTS.md`・`decisions.md` を Workers に合わせて更新
+
 ## 2026-10-12 Claude Code — 返答は日本語で
 
 - オーナーの依頼: これからも日本語で説明してほしい（Claude が一度英語で返答したため）

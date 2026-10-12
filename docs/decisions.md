@@ -68,3 +68,7 @@
 - 理由: オーナーが今後、同じ GitHub アカウントで別のサイトを公開するかもしれないため。github.io のままだと同じドメインの別サイトから家計データ（ブラウザの保存領域）を読まれうる。本番の記録を入れる前の今が、移行の手間が最も小さい
 - 影響: `scripts/build-site.sh` で公開ファイルだけを `dist/` に集め、`_headers` でセキュリティ用ヘッダー（CSP＋frame-ancestors など）を返す。どちらも `scripts/check.sh`・`security-check.mjs` で検査。移行後は github.io のデータを消して GitHub Pages を停止する（`docs/deploy.md`）
 - リポジトリは公開のまま（非公開にするかは別途判断）
+
+## 2026-10-12 Cloudflare は Pages ではなく Workers（静的アセット）で公開する
+- 理由: Cloudflare の作成画面が Workers を標準にしており、オーナーが Workers で作成した。作り直すより設定ファイルを足す方が早い。機能（専用ドメイン・自動公開・プレビュー・`_headers`）は Pages と同等
+- 影響: `wrangler.jsonc` を追加（サーバー側のコードなし、`dist/` を配るだけ）。`security-check.mjs` で `main` や外部サービス接続の追加を禁止。URL は `kurashi-shushi-pwa.<サブドメイン>.workers.dev`

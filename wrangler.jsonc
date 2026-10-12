@@ -1,0 +1,17 @@
+// Cloudflare Workers（静的アセット）の設定。docs/deploy.md
+// - サーバー側のコード（main）は持たず、dist/ のファイルを配るだけ（家計データは受け取らない）
+// - デプロイ時に scripts/build-site.sh で dist/ を作る
+// - _headers（dist/ にコピーされる）で CSP などのセキュリティヘッダーを返す
+// この名前は Cloudflare 上の Worker 名と同じにする
+{
+  "name": "kurashi-shushi-pwa",
+  "compatibility_date": "2026-10-01",
+  "build": {
+    "command": "bash scripts/build-site.sh"
+  },
+  "assets": {
+    "directory": "./dist"
+  },
+  "workers_dev": true,
+  "preview_urls": true
+}

@@ -1,16 +1,22 @@
-# 公開（デプロイ）— Cloudflare Pages
+# 公開（デプロイ）— Cloudflare Workers（静的アセット）
 
 - 決定: 2026-10-12（`docs/decisions.md`）
 - 理由: 今後、同じ GitHub アカウント（`diiiiiiiisuke.github.io`）で別のサイトを公開しても、家計データを読まれないようにするため。
   ブラウザの保存領域はドメインごとに分かれるので、このアプリだけの専用ドメイン（`*.pages.dev`）に移す。
 
+> 2026-10-12 追記: Cloudflare の「Create」は今は **Workers** が標準になっているため、オーナーは Workers で作成した（Worker 名 `kurashi-shushi-pwa`）。
+> Workers では設定ファイル `wrangler.jsonc` が必要なので追加した。サーバー側のコードは持たず、`dist/` のファイルを配るだけ（Pages と同じ）。
+
 ## 仕組み
 
 ```
-main にマージ → Cloudflare Pages が自動でビルド（bash scripts/build-site.sh）
+main にマージ → Cloudflare（Workers Builds）が npx wrangler deploy を実行
+→ wrangler.jsonc の build.command で bash scripts/build-site.sh → dist/ を作る
 → dist/ の中身だけを公開（docs/・tests/・scripts/ などは公開しない）
-→ https://<プロジェクト名>.pages.dev に反映
+→ https://kurashi-shushi-pwa.<アカウントのサブドメイン>.workers.dev に反映
 ```
+
+- `wrangler.jsonc`: Worker 名・ビルドコマンド・公開フォルダ（`./dist`）だけ。サーバー側のコード（`main`）や外部サービスとの接続（KV・D1 など）は `scripts/security-check.mjs` が禁止している
 
 - `scripts/build-site.sh`: 公開するファイル（`index.html`・`styles.css`・`sw.js`・`manifest.webmanifest`・`icon.svg`・`_headers`・`js/`）だけを `dist/` にコピーする
 - `_headers`: Cloudflare が返すセキュリティ用の HTTP ヘッダー（CSP＋埋め込み禁止など）。`scripts/security-check.mjs` が内容を確認する
@@ -24,7 +30,12 @@ main にマージ → Cloudflare Pages が自動でビルド（bash scripts/buil
 1. https://dash.cloudflare.com/sign-up でアカウントを作る（無料プラン）
 2. 右上のアイコン → **My Profile → Authentication** で **2段階認証（Two-Factor Authentication）をオン**にする（GitHub と同じ認証アプリでよい）
 
-### 2. Cloudflare Pages のプロジェクトを作る
+### 2. Cloudflare でアプリを作る（Workers。2026-10-12 オーナー作成済み）
+
+Workers & Pages → Create → **Import a repository** → GitHub の `kurashi-shushi-pwa` → Project name `kurashi-shushi-pwa`、Build command は空欄、Deploy command は `npx wrangler deploy`（初期値のまま）。設定ファイル `wrangler.jsonc` がリポジトリにあるので、それ以外の入力は不要。
+ビルドに失敗した場合は、Worker の **Deployments（または Builds）→ 失敗したビルド → Retry build**。
+
+### （旧）Cloudflare Pages で作る場合
 1. 左メニュー **Workers & Pages → Create → Pages → Connect to Git**
 2. **GitHub** を選び、Cloudflare の GitHub アプリをインストールする。このとき **Only select repositories → kurashi-shushi-pwa** だけを選ぶ
 3. リポジトリ `kurashi-shushi-pwa` を選んで **Begin setup**
