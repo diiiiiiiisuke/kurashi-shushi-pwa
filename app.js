@@ -61,7 +61,7 @@ function renderTransactions() {
   const box = document.querySelector("#transactionList");
   const rows = [...state.transactions].sort((a,b) => b.date.localeCompare(a.date));
   box.classList.toggle("empty", !rows.length);
-  box.innerHTML = rows.length ? rows.map(t => `<div class="list-item"><div><strong>${escapeHtml(t.description || t.category)}</strong><small>${t.date} · ${escapeHtml(t.scope === "business" ? "事業" : "個人")} · ${escapeHtml(t.category)}</small></div><div><span class="amount ${t.type}">${t.type === "income" ? "+" : "−"}${yen.format(t.amount)}</span><button class="text-button" data-delete-transaction="${t.id}">削除</button></div></div>`).join("") : "まだ取引がありません";
+  box.innerHTML = rows.length ? rows.map(t => { const card=(state.cards||[]).find(c=>c.id===t.paymentMethod); const method=card ? card.name : (t.paymentMethod === "cash" ? "現金・口座" : "未設定"); return `<div class="list-item"><div><strong>${escapeHtml(t.description || t.category)}</strong><small>${t.date} · ${escapeHtml(t.scope === "business" ? "事業" : "個人")} · ${escapeHtml(t.category)} · ${escapeHtml(method)}</small></div><div><span class="amount ${t.type}">${t.type === "income" ? "+" : "−"}${yen.format(t.amount)}</span><button class="text-button" data-delete-transaction="${t.id}">削除</button></div></div>`; }).join("") : "まだ取引がありません";
 }
 function renderDebts() {
   const box = document.querySelector("#debtList");
