@@ -1,5 +1,5 @@
 // アプリのファイルを変更したら CACHE の番号を必ず上げる（古いキャッシュが残るのを防ぐ）
-const CACHE = "kurashi-shushi-v13";
+const CACHE = "kurashi-shushi-v14";
 // js/ にファイルを追加・削除したらここも更新する（scripts/check.sh が確認する）
 const ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.webmanifest", "./icon.svg",

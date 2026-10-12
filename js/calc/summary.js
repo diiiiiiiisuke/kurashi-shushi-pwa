@@ -1,5 +1,5 @@
 // 集計（純粋関数）
-import { addMonths, monthOf, sumBy, daysBetween } from "../util.js";
+import { addMonths, monthOf, sumBy, daysBetween, daysInMonth, dateInMonth, shortMonth } from "../util.js";
 
 export const inMonth = (txs, ym) => txs.filter(t => monthOf(t.date) === ym);
 
@@ -31,6 +31,30 @@ export function trend(txs, endYm, n = 12) {
   return Array.from({ length: n }, (_, i) => {
     const month = addMonths(endYm, i - n + 1);
     return { month, ...monthTotals(txs, month) };
+  });
+}
+
+// 日・週は選択月の中だけ、月は選択月までの12か月。
+// 週は月曜〜日曜。月をまたぐ週は選択月に含まれる日だけを集計する。
+export function periodTrend(txs, ym, unit = "monthly") {
+  const buckets = [];
+  if (unit === "daily" || unit === "weekly") {
+    const [year, month] = ym.split("-").map(Number);
+    const last = daysInMonth(ym);
+    for (let day = 1; day <= last;) {
+      const endDay = unit === "daily" ? day : Math.min(last, day + (7 - new Date(year, month - 1, day).getDay()) % 7);
+      buckets.push({ start: dateInMonth(ym, day), end: dateInMonth(ym, endDay), label: `${month}/${day}` });
+      day = endDay + 1;
+    }
+  } else {
+    for (let i = 0; i < 12; i++) {
+      const month = addMonths(ym, i - 11);
+      buckets.push({ start: dateInMonth(month, 1), end: dateInMonth(month, 31), label: shortMonth(month) });
+    }
+  }
+  return buckets.map(bucket => {
+    const records = txs.filter(t => t.date >= bucket.start && t.date <= bucket.end);
+    return { ...bucket, ...totals(records), count: records.length };
   });
 }
 

@@ -24,7 +24,7 @@ const VIEWS = {
 
 const app = {
   state: load(),
-  ctx: { view: "home", month: monthOf(localDate()), filters: { q: "", categoryId: "", scope: "" }, sort: "date-desc", debtId: null, lastDate: null },
+  ctx: { view: "home", month: monthOf(localDate()), filters: { q: "", categoryId: "", scope: "" }, sort: "date-desc", debtId: null, lastDate: null, trendUnit: "monthly" },
   // 状態を変えたら必ずこれを呼ぶ（保存して描き直す）
   commit() {
     generateRecurring(app.state, localDate()); // 定期取引を登録・編集した直後にも反映する
@@ -148,6 +148,12 @@ document.addEventListener("input", e => {
   if (overview) { overview.outerHTML = renderOverview(app); afterOverview(app); }
 });
 document.addEventListener("change", e => {
+  if (e.target.matches("[data-trend-unit]")) {
+    app.ctx.trendUnit = e.target.value;
+    render();
+    document.querySelector("[data-trend-unit]")?.focus();
+    return;
+  }
   if (e.target.dataset.sim) save(app.state);
   if (e.target.matches("[data-records-view]")) setRecordsView(e.target.value);
   if (e.target.dataset.overview) { app.state.settings[e.target.dataset.overview] = e.target.value; app.commit(); }
