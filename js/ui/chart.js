@@ -28,7 +28,7 @@ function axisLimit(value) {
   return Math.max(2, Math.ceil(value / magnitude) * magnitude);
 }
 
-// 12か月の収入・支出（棒）と収支（線）
+// 日・週・月ごとの収入・支出（棒）と収支（線）
 export function drawTrend(canvas, rows, labels) {
   const { ctx, w, h } = setup(canvas, 220);
   const pad = { l: 36, r: 8, t: 10, b: 24 };
@@ -37,7 +37,8 @@ export function drawTrend(canvas, rows, labels) {
   axisPadding(ctx, pad, [short(min), short(max / 2), short(max)]);
   const y = v => pad.t + (h - pad.t - pad.b) * (1 - (v - min) / (max - min));
   const step = (w - pad.l - pad.r) / rows.length;
-  const bw = Math.max(3, step / 2 - 3);
+  const bw = Math.max(1, Math.min(14, (step - 2) / 2));
+  const labelStride = Math.max(1, Math.ceil(42 / step));
 
   ctx.strokeStyle = COLORS.grid; ctx.fillStyle = COLORS.text; ctx.textAlign = "right";
   // 小さいマイナスは目盛りを省く（0 と重なるため）
@@ -49,7 +50,11 @@ export function drawTrend(canvas, rows, labels) {
     const x = pad.l + i * step + step / 2;
     ctx.fillStyle = COLORS.income; ctx.fillRect(x - bw - 1, y(r.income), bw, y(0) - y(r.income));
     ctx.fillStyle = COLORS.expense; ctx.fillRect(x + 1, y(r.expense), bw, y(0) - y(r.expense));
-    if ((rows.length - 1 - i) % 2 === 0 || rows.length <= 6) { ctx.fillStyle = COLORS.text; ctx.textAlign = "center"; ctx.fillText(labels[i], x, h - 8); }
+    if ((rows.length - 1 - i) % labelStride === 0) {
+      ctx.fillStyle = COLORS.text; ctx.textAlign = "center";
+      const half = ctx.measureText(labels[i]).width / 2;
+      ctx.fillText(labels[i], Math.max(pad.l + half, Math.min(w - pad.r - half, x)), h - 8);
+    }
   });
   ctx.strokeStyle = COLORS.balance; ctx.lineWidth = 2; ctx.beginPath();
   rows.forEach((r, i) => { const x = pad.l + i * step + step / 2; i ? ctx.lineTo(x, y(r.balance)) : ctx.moveTo(x, y(r.balance)); });

@@ -1,22 +1,31 @@
 // 分析: 12か月の推移、カテゴリ別、固定費と変動費、個人と事業
-import { fmt, signed, addMonths, shortMonth, monthLabel, sumBy } from "../util.js";
-import { trend, inMonth, byCategory, fixedVariable, scopeTotals } from "../calc/summary.js";
+import { fmt, signed, addMonths, monthLabel, sumBy } from "../util.js";
+import { periodTrend, inMonth, byCategory, fixedVariable, scopeTotals } from "../calc/summary.js";
 import { drawTrend } from "./chart.js";
-import { h, panel, metric, emptyNote, categoryName } from "./common.js";
+import { h, panel, metric, emptyNote, categoryName, options } from "./common.js";
 import { accountBreakdown } from "./breakdown.js";
+
+const PERIODS = [{ value: "daily", name: "日別" }, { value: "weekly", name: "週別" }, { value: "monthly", name: "月別" }];
+const periodOf = app => PERIODS.some(p => p.value === app.ctx.trendUnit) ? app.ctx.trendUnit : "monthly";
 
 export function renderAnalysis(app) {
   const { state, ctx } = app;
   const ym = ctx.month, prev = addMonths(ym, -1);
-  const rows = trend(state.transactions, ym, 12);
-  const active = rows.filter(r => r.income || r.expense);
+  const unit = periodOf(app);
+  const rows = periodTrend(state.transactions, ym, unit);
+  const active = rows.filter(r => r.count > 0);
+  const title = unit === "monthly" ? "12か月の推移" : `${monthLabel(ym)}の${unit === "daily" ? "日別" : "週別"}推移`;
+  const unitName = { daily: "日", weekly: "週", monthly: "月" }[unit];
+  const countName = unit === "monthly" ? "か月" : unitName;
   const avg = k => (active.length ? sumBy(active, r => r[k]) / active.length : 0);
   const out = [];
 
-  out.push(panel("12か月の推移", `<canvas id="trendChart" aria-label="12か月の収入・支出・収支のグラフ"></canvas>
+  out.push(panel(title, `<div class="trend-controls"><select data-trend-unit aria-label="グラフの集計単位">${options(PERIODS, unit, "value")}</select></div>
+    <canvas id="trendChart" aria-label="${title}。収入・支出・収支のグラフ"></canvas>
     <div class="legend"><span class="key income">収入</span><span class="key expense">支出</span><span class="key balance">収支</span></div>
     <div class="metrics three">${metric("平均収入", fmt(avg("income")), "income")}${metric("平均支出", fmt(avg("expense")), "expense")}${metric("平均収支", signed(avg("balance")))}</div>
-    <p class="muted small">記録のある月（${active.length}か月）の平均</p>`, { eyebrow: "TREND" }));
+    <p class="muted small">記録のある${unitName}（${active.length}${countName}）の平均</p>
+    ${unit === "weekly" ? `<p class="muted small">月曜〜日曜で集計。月をまたぐ週は選択月の日だけを含み、横軸に開始日を表示します。</p>` : ""}`, { eyebrow: "TREND" }));
 
   out.push(panel(`${monthLabel(ym)}の支払方法別の支出`, accountBreakdown(state, inMonth(state.transactions, ym)) +
     `<button type="button" class="link" data-action="records-view" data-id="card">カード別の明細を見る ›</button>`, { eyebrow: "BY CARD" }));
@@ -51,6 +60,6 @@ export function renderAnalysis(app) {
 export function afterAnalysis(app) {
   const canvas = document.querySelector("#trendChart");
   if (!canvas) return;
-  const rows = trend(app.state.transactions, app.ctx.month, 12);
-  drawTrend(canvas, rows, rows.map(r => shortMonth(r.month)));
+  const rows = periodTrend(app.state.transactions, app.ctx.month, periodOf(app));
+  drawTrend(canvas, rows, rows.map(r => r.label));
 }

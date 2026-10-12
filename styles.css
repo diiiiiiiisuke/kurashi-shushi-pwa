@@ -284,3 +284,6 @@ body.locked main, body.locked nav, body.locked .fab, body.locked .topbar { visib
 .card-payment-row .row-between strong:first-child { min-width: 0; overflow-wrap: anywhere; }
 .card-payment-row .expense { flex-shrink: 0; white-space: nowrap; }
 .card-payment-row > small { display: block; margin: 5px 0 8px; }
+
+.trend-controls { display: flex; justify-content: flex-start; margin: 0 0 12px; }
+.trend-controls select { max-width: 100%; padding: 9px 12px; border: 1px solid var(--db-line); border-radius: 8px; background: #fff; font-size: 16px; color: var(--ink); }
