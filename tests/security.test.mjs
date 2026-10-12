@@ -40,3 +40,10 @@ test("Cloudflare のヘッダー（_headers）の CSP 変更・他サイトへ�
   assert.ok(withFile("_headers", hd + "\n  Access-Control-Allow-Origin: *\n").some(p => p.includes("Access-Control-Allow-Origin")));
   assert.ok(withFile("_headers", hd.replace("X-Frame-Options: DENY", "")).some(p => p.includes("X-Frame-Options")));
 });
+
+test("wrangler.jsonc にサーバー側のコード・外部サービスを足すと止まる", () => {
+  const wr = repo["wrangler.jsonc"];
+  assert.ok(withFile("wrangler.jsonc", wr.replace('"assets"', '"main": "src/index.js",\n  "assets"')).some(p => p.includes('"main"')));
+  assert.ok(withFile("wrangler.jsonc", wr.replace('"assets"', '"kv_namespaces": [],\n  "assets"')).some(p => p.includes("kv_namespaces")));
+  assert.ok(withFile("wrangler.jsonc", wr.replace("./dist", ".")).some(p => p.includes("directory")));
+});
