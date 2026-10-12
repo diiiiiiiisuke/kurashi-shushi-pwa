@@ -36,7 +36,8 @@
 
 ## 次にやる（優先度順）
 
-- [ ] github.io の片付け（オーナー。`docs/deploy.md` 手順4: 古いデータの削除・GitHub Pages を None に）
+- [x] github.io の片付け（古いデータの削除・GitHub Pages を None）、Cloudflare の GitHub アプリをこのリポジトリだけに限定（オーナー、2026-10-12）
+- [ ] Cloudflare アカウントの2段階認証（オーナー。`docs/security.md` 4.4）
 - [ ] GitHub の設定（main の保護ルール・Actions の権限・Secret scanning・AI アプリのリポジトリ制限）を `docs/security.md` 4章の手順で行う（オーナー）
 - [ ] アプリで PIN ロックをオンにする（オーナー）
 - [ ] デモ用ファイルで操作感を確認 → 開始用ファイル（保有クレカ18枚入り）を読み込んで本番開始（オーナー。ファイルはチャットで受け渡し済み、リポジトリには置かない）

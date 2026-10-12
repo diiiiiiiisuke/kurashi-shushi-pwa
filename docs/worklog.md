@@ -8,7 +8,8 @@
 
 - オーナーの確認: ホーム画面のアプリは `〜.workers.dev`、設定に「☁️ iCloudに保存（1タップ）」が表示される、本番デプロイ（PR #9〜#11）は成功
 - README・AGENTS.md・docs の「移行中」「Cloudflare Pages」を Workers・移行済みに更新。サブドメインはリポジトリに書かず `<サブドメイン>` とした
-- 残課題（オーナー）: github.io の片付け（`docs/deploy.md` 手順4）
+- その後オーナーが完了: github.io のデータ削除・GitHub Pages の停止、Cloudflare の GitHub アプリを `kurashi-shushi-pwa` だけに限定
+- 残課題（オーナー）: Cloudflare の2段階認証の確認、GitHub の main 保護ルールなど（`docs/security.md` 4章）
 
 ## 2026-10-12 Codex — グラフの縦軸を金額に合わせて表示
 

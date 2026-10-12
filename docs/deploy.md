@@ -4,7 +4,7 @@
 - 理由: 今後、同じ GitHub アカウント（`diiiiiiiisuke.github.io`）で別のサイトを公開しても、家計データを読まれないようにするため。
   ブラウザの保存領域はドメインごとに分かれるので、このアプリだけの専用ドメイン（`*.workers.dev`）に移す。
 
-> **2026-10-12 移行完了**: オーナーの iPhone のホーム画面アプリは `kurashi-shushi-pwa.<サブドメイン>.workers.dev` で動いている。本番デプロイ（PR #9・#10・#11）は成功。残りは「4. 古いアプリ（github.io）を片付ける」
+> **2026-10-12 移行完了**: オーナーの iPhone のホーム画面アプリは `kurashi-shushi-pwa.<サブドメイン>.workers.dev` で動いている。本番デプロイ（PR #9・#10・#11）は成功。「4. 古いアプリ（github.io）を片付ける」も完了（iPhone の github.io のデータ削除、GitHub Pages を None）。Cloudflare の GitHub アプリは `kurashi-shushi-pwa` だけに限定済み
 
 > 2026-10-12 追記: Cloudflare の「Create」は今は **Workers** が標準になっているため、オーナーは Workers で作成した（Worker 名 `kurashi-shushi-pwa`）。
 > Workers では設定ファイル `wrangler.jsonc` が必要なので追加した。サーバー側のコードは持たず、`dist/` のファイルを配るだけ（Pages と同じ）。
@@ -58,7 +58,7 @@ Workers & Pages → Create → **Import a repository** → GitHub の `kurashi-s
 2. ホーム画面の**新しいアプリ**を開き、「設定 → バックアップ → 読み込む」で記録を入れる（本番開始なら、保有クレカ18枚入りの開始用ファイル）
 3. 必要なら「設定 → セキュリティ」で PIN ロックをオンにする（PIN は端末・アプリごとの設定なので、新しいアプリで設定し直す）
 
-### 4. 古いアプリ（github.io）を片付ける（大事）
+### 4. 古いアプリ（github.io）を片付ける（大事。2026-10-12 完了）
 1. ホーム画面に**古いアプリ**（github.io）が残っていれば、開いて「設定 → データを消す」で中の記録を消し、アイコンを削除する（古いアプリがなければ飛ばす）
 2. iPhone の **設定 → アプリ → Safari → 詳細 → Webサイトデータ** で `diiiiiiiisuke.github.io` を左にスワイプして削除する（Safari で開いたときのデータも消える。**workers.dev は消さない**）
 3. GitHub → リポジトリ → **Settings → Pages** → Build and deployment の Branch を **None** にして **Save**（github.io での公開を止める）
