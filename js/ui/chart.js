@@ -11,11 +11,15 @@ function setup(canvas, height) {
   return { ctx, w, h: height };
 }
 
-// 小額も0に丸めず、目盛りに必要な桁を残す。
-const short = v => {
-  const unit = Math.abs(v) >= 10000 ? 10000 : Math.abs(v) >= 1000 ? 1000 : 1;
-  return `${+((v / unit).toPrecision(3))}${unit === 10000 ? "万" : unit === 1000 ? "千" : ""}`;
-};
+// 金額は千・万に省略せず、3桁区切りで表示する。
+const numberFormat = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 2 });
+const short = v => numberFormat.format(v);
+
+function axisPadding(ctx, pad, left, right = []) {
+  const width = labels => Math.ceil(Math.max(0, ...labels.map(v => ctx.measureText(String(v)).width))) + 8;
+  pad.l = Math.max(pad.l, width(left));
+  if (right.length) pad.r = Math.max(pad.r, width(right));
+}
 
 // データを収めつつ、半分の目盛りも読みやすい上限にする。
 function axisLimit(value) {
@@ -30,6 +34,7 @@ export function drawTrend(canvas, rows, labels) {
   const pad = { l: 36, r: 8, t: 10, b: 24 };
   const max = Math.max(1, ...rows.flatMap(r => [r.income, r.expense]));
   const min = Math.min(0, ...rows.map(r => r.balance));
+  axisPadding(ctx, pad, [short(min), short(max / 2), short(max)]);
   const y = v => pad.t + (h - pad.t - pad.b) * (1 - (v - min) / (max - min));
   const step = (w - pad.l - pad.r) / rows.length;
   const bw = Math.max(3, step / 2 - 3);
@@ -69,14 +74,15 @@ export function drawProjection(canvas, p, labels) {
   const { ctx, w, h } = setup(canvas, 260);
   const pad = { l: 40, r: 38, t: 16, b: 26 };
   const n = p.months.length;
+  const maxBal = Math.max(1, p.nowBalance, ...p.past.map(q => q.balance));
+  const maxPay = Math.max(1, ...p.paid.map(b => b.amount)) * 1.15;
+  axisPadding(ctx, pad, [man(maxBal / 2), man(maxBal)], [man(maxPay / 2), man(maxPay)]);
   // 実績（過去）が短くても見えるよう、過去側に最低でも幅の約1/4を割り当てる
   const W = w - pad.l - pad.r, pastN = p.anchorIndex + 1, futN = n - pastN;
   const pastW = futN ? Math.max(W * pastN / n, p.anchorIndex ? W * 0.24 : 0) : W;
   const pastStep = pastW / pastN, futStep = futN ? (W - pastW) / futN : 0;
   const x = i => (i <= p.anchorIndex ? pad.l + pastStep * (i + 0.5) : pad.l + pastW - pastStep / 2 + futStep * (i - p.anchorIndex));
   const step = Math.min(pastStep, futStep || pastStep);
-  const maxBal = Math.max(1, p.nowBalance, ...p.past.map(q => q.balance));
-  const maxPay = Math.max(1, ...p.paid.map(b => b.amount)) * 1.15;
   const yB = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxBal);
   const yP = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxPay);
   const nowX = x(p.anchorIndex);
@@ -129,6 +135,7 @@ export function drawSpeed(canvas, rows) {
   const ok = rows.filter(r => r.payable);
   const maxM = Math.max(1, ...ok.map(r => r.months)) * 1.12;
   const maxI = Math.max(1, ...ok.map(r => r.totalInterest)) * 1.12;
+  axisPadding(ctx, pad, [`${Math.round(maxM)}か月`], [man(maxI / 2), man(maxI)]);
   const step = (w - pad.l - pad.r) / rows.length;
   const x = i => pad.l + step * (i + 0.5);
   const yM = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxM);
@@ -166,8 +173,6 @@ export function drawOverview(canvas, o, labels, mode = "both") {
   const { ctx, w, h } = setup(canvas, 250);
   const pad = { l: 40, r: 40, t: 16, b: 26 };
   const rows = o.rows, n = rows.length;
-  const step = (w - pad.l - pad.r) / n;
-  const x = i => pad.l + step * (i + 0.5);
   const vals = mode === "net" ? rows.map(r => r.balance) : rows.flatMap(r => [r.income, r.expense]);
   const maxValue = Math.max(0, ...vals);
   const maxV = maxValue === 0 && Math.min(0, ...vals) < 0 ? 0 : axisLimit(maxValue * 1.1);
@@ -175,6 +180,9 @@ export function drawOverview(canvas, o, labels, mode = "both") {
   const yV = v => pad.t + (h - pad.t - pad.b) * (maxV - v) / (maxV - minV);
   const debts = rows.map(r => r.debt).filter(v => v != null);
   const maxD = axisLimit(Math.max(0, ...debts) * 1.08);
+  axisPadding(ctx, pad, [man(minV), man((minV + maxV) / 2), man(maxV)], debts.length ? [man(maxD / 2), man(maxD)] : []);
+  const step = (w - pad.l - pad.r) / n;
+  const x = i => pad.l + step * (i + 0.5);
   const yD = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxD);
   const nowX = x(o.nowIndex) + step / 2;
 
