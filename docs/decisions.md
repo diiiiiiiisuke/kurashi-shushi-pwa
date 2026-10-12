@@ -63,3 +63,8 @@
 - 影響: `scripts/security-check.mjs` を CI で実行（外部通信・外部URL・CSP変更・ワークフロー権限・未固定アクションを検出）。CSP・チェック・ワークフロー・暗号まわりは、オーナーの明示的な許可なしに変更しない（AGENTS.md）。自動マージは使わない
 - アプリ: PINロック（ハッシュのみ保存、ロック中は記録を描画しない）と暗号化バックアップ（AES-GCM）。端末内データの暗号化は、PIN を忘れたときに復元できなくなるため今回は見送り
 - GitHub の設定（main の保護ルール・Actions の権限など）は AI から変更できないため、手順を docs/security.md 4章に書きオーナーが行う
+
+## 2026-10-12 公開先を GitHub Pages から Cloudflare Pages に移す
+- 理由: オーナーが今後、同じ GitHub アカウントで別のサイトを公開するかもしれないため。github.io のままだと同じドメインの別サイトから家計データ（ブラウザの保存領域）を読まれうる。本番の記録を入れる前の今が、移行の手間が最も小さい
+- 影響: `scripts/build-site.sh` で公開ファイルだけを `dist/` に集め、`_headers` でセキュリティ用ヘッダー（CSP＋frame-ancestors など）を返す。どちらも `scripts/check.sh`・`security-check.mjs` で検査。移行後は github.io のデータを消して GitHub Pages を停止する（`docs/deploy.md`）
+- リポジトリは公開のまま（非公開にするかは別途判断）

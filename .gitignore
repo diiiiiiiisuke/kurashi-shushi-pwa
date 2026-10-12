@@ -2,3 +2,4 @@
 *.backup.json
 private-data/
 .DS_Store
+dist/

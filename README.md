@@ -2,7 +2,7 @@
 
 スマホで毎日の家計簿、自分の収支状況（個人・事業）、カード・ローンの返済とシミュレーションを管理する、依存関係のないPWAです。
 
-- アプリ: https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/
+- アプリ: Cloudflare Pages に移行中（手順と URL は [docs/deploy.md](docs/deploy.md)）。旧 URL: https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/（移行後に停止）
 - 開発する人・AIエージェントは、まず [AGENTS.md](AGENTS.md) と [docs/](docs/README.md) を読んでください
 - スマホからの開発手順: [docs/mobile-workflow.md](docs/mobile-workflow.md)
 - 次にやること: [docs/roadmap.md](docs/roadmap.md)

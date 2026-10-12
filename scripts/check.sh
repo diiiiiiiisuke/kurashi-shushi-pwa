@@ -18,6 +18,19 @@ const unlisted = walk("js").filter(f => !listed.includes(f));
 if (missing.length || unlisted.length) { console.error("sw.js の ASSETS がずれています", { missing, unlisted }); process.exit(1); }
 '
 
+# 公開用ファイル（dist/）が sw.js の ASSETS と _headers だけで、docs などを含まないか
+bash scripts/build-site.sh > /dev/null
+node -e '
+const fs = require("fs"), path = require("path");
+const src = fs.readFileSync("sw.js", "utf8");
+const want = new Set([...src.matchAll(/"\.\/([^"]+)"/g)].map(m => m[1]).concat(["sw.js", "_headers"]));
+const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.relative("dist", path.join(d, e.name))]);
+const got = new Set(walk("dist"));
+const extra = [...got].filter(f => !want.has(f)), missing = [...want].filter(f => !got.has(f));
+if (extra.length || missing.length) { console.error("dist/ の中身がずれています", { extra, missing }); process.exit(1); }
+'
+rm -rf dist
+
 # 自動テスト（Node 標準のテストランナー、パッケージ不要）
 node --test tests/*.test.mjs > /tmp/kurashi-test.log 2>&1 || { cat /tmp/kurashi-test.log; exit 1; }
 grep -E '^# (pass|fail)' /tmp/kurashi-test.log

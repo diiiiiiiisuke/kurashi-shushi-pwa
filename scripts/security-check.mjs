@@ -39,6 +39,12 @@ export function scan(files) {
   if (/\son[a-z]+\s*=/.test(html)) problems.push("index.html: インラインのイベント属性（onclick など）があります");
   if (/https?:\/\//.test(files["manifest.webmanifest"] ?? "")) problems.push("manifest.webmanifest: 外部URLがあります");
 
+  // Cloudflare Pages のヘッダー（_headers）: index.html と同じ CSP ＋ 埋め込み禁止
+  const headers = files["_headers"] ?? "";
+  if (!headers.includes(`Content-Security-Policy: ${EXPECTED_CSP}; frame-ancestors 'none'`)) problems.push("_headers: Content-Security-Policy が変更・削除されています");
+  for (const h of ["X-Content-Type-Options: nosniff", "X-Frame-Options: DENY", "Referrer-Policy: no-referrer"]) if (!headers.includes(h)) problems.push(`_headers: ${h} がありません`);
+  if (/Access-Control-Allow-Origin/i.test(headers)) problems.push("_headers: Access-Control-Allow-Origin（他サイトからの読み取り許可）は使えません");
+
   for (const [path, src] of Object.entries(files)) {
     if (!/^js\/.*\.js$/.test(path) && path !== "sw.js") continue;
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
@@ -62,7 +68,7 @@ export function scan(files) {
 
 export function readRepo(root = ".") {
   const files = {};
-  for (const p of ["index.html", "sw.js", "manifest.webmanifest"]) files[p] = readFileSync(join(root, p), "utf8");
+  for (const p of ["index.html", "sw.js", "manifest.webmanifest", "_headers"]) files[p] = readFileSync(join(root, p), "utf8");
   for (const p of walk(join(root, "js"))) files[p.slice(root === "." ? 0 : root.length + 1)] = readFileSync(p, "utf8");
   for (const p of walk(join(root, ".github/workflows"))) files[p.slice(root === "." ? 0 : root.length + 1)] = readFileSync(p, "utf8");
   return files;
