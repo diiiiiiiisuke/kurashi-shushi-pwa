@@ -1,13 +1,22 @@
 # くらし収支
 
-スマホで毎日の家計、事業の入出金、カード・ローンの返済状況を記録する、依存関係のないPWAです。
+スマホで毎日の家計簿、自分の収支状況（個人・事業）、カード・ローンの返済状況を管理する、依存関係のないPWAです。
+
+- アプリ: https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/
+- 開発する人・AIエージェントは、まず [AGENTS.md](AGENTS.md) と [docs/](docs/README.md) を読んでください
+- スマホからの開発手順: [docs/mobile-workflow.md](docs/mobile-workflow.md)
+- 次にやること: [docs/roadmap.md](docs/roadmap.md)
 
 ## 大切な扱い
 
-- このリポジトリにはアプリのコードだけを置きます。家計データ、明細、APIキー、PDFはコミットしません。
-- 記録は端末内に保存されます。機種変更・ブラウザデータ削除前に、アプリの「設定」からバックアップを書き出してください。
-- GitHub Pagesで公開する場合も、リポジトリは必ず非公開にしてください。静的なGitHub Pagesはprivate repositoryの公開設定や契約による制約があります。公開できない場合はCloudflare Pages等の認証付きホスティングを使います。
+- このリポジトリには **アプリのコードとドキュメントだけ** を置きます。家計データ、明細、APIキー、PDFはコミットしません（リポジトリは公開です）。
+- 記録は端末内（ブラウザの localStorage）に保存され、外部には送信しません。機種変更・ブラウザデータ削除の前に、アプリの「設定」からバックアップを書き出してください。
 
 ## 開発
 
-ローカルでは `index.html` をブラウザで開くか、静的ファイルサーバーで確認します。デプロイ先は HTTPS が必要です。Service Worker の更新後は、アプリを閉じて開き直してください。
+```sh
+python3 -m http.server 8000   # http://localhost:8000 で確認
+bash scripts/check.sh         # コミット前のチェック
+```
+
+アプリのファイルを変更したら `sw.js` の `CACHE` の番号を上げてください。
