@@ -35,6 +35,17 @@
 7. **共用PCでは使わない**
    ブラウザの拡張機能はページのデータを読めることがある。
 
+## GitHub 2段階認証の設定手順（スマホのみで可）
+
+1. 認証アプリを入れる（Google Authenticator / Microsoft Authenticator / iPhoneの「パスワード」アプリ など）
+2. スマホのブラウザで github.com を開き、右上アイコン → Settings → Password and authentication → Enable two-factor authentication
+3. 「Authenticator app」を選ぶ。同じスマホでQRコードは読めないので「setup key」の文字列をコピーし、認証アプリに手入力で追加する
+4. 認証アプリに出る6桁の数字をGitHubに入力
+5. **リカバリーコードを保存する**（スマホを失くしたときの唯一の復旧手段。GitHub・このリポジトリには絶対に置かない）
+6. 追加で「Passkeys」も登録しておくと、指紋・顔認証でログインでき、予備の手段にもなる
+
+リカバリーコードや認証アプリの設定キーは、このリポジトリ・Issue・AIへの相談に絶対に書かない。
+
 ## AIエージェント（Codex / Claude）への約束
 
 - CSPを緩める（外部ドメインの許可など）、外部通信を追加する変更は、オーナーの明示的な許可なしに行わない
