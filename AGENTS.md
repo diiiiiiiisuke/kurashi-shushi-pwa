@@ -25,8 +25,9 @@
 │   ├── calc/           計算（DOM に触らない純粋関数。テスト対象）
 │   │   ├── debt.js         返済先の現在残高・利息と元金の分割
 │   │   ├── simulation.js   返済シミュレーション
-│   │   └── summary.js      月の集計・予算・推移
-│   └── ui/             画面（ホーム・記録・分析・返済・設定・入力シート・グラフ）
+│   │   ├── projection.js   返済グラフ用（実績＋予測、返済スピードの比較）
+│   │   └── summary.js      月の集計・予算・推移・支払方法別
+│   └── ui/             画面（ホーム・家計簿DB・分析・返済・設定・入力シート・グラフ・カード別内訳）
 ├── tests/              node --test で動く自動テスト（パッケージ不要）
 ├── sw.js               Service Worker（ASSETS に全ファイルを列挙）
 ├── manifest.webmanifest / icon.svg
@@ -54,7 +55,7 @@
 
 ## 現在進行中の作業
 
-v2（`docs/spec-v2.md`）は実装済み。次は `docs/roadmap.md` の「次にやる」から。仕様にない判断が必要なときは勝手に決めず、`docs/spec-v2.md` の「要確認事項」に追記してオーナーに確認する。
+v2（`docs/spec-v2.md`）・v3（`docs/spec-v3.md`: Notion風DB・カード別・返済グラフ）は実装済み。次は `docs/roadmap.md` の「次にやる」から。仕様にない判断が必要なときは勝手に決めず、`docs/spec-v2.md` の「要確認事項」に追記してオーナーに確認する。
 
 ## 作業の流れ（毎回）
 

@@ -41,3 +41,16 @@ export function txRow(state, t) {
     <span class="item-main"><strong>${h(t.memo || categoryName(state, t.categoryId))}</strong><small>${sub}${t.recurringId ? " · 定期" : ""}${t.interest ? ` · うち利息 ${fmt(t.interest)}` : ""}</small></span>
     <span class="amount ${amountClass(t.type)}">${amountText(t)}</span></button>`;
 }
+
+// Notion のタグと同じ9色。名前から色を決める（同じ名前は常に同じ色）
+const TAG_COLORS = ["gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"];
+export function tagColor(name) {
+  let n = 0;
+  for (const ch of String(name)) n = (n * 31 + ch.codePointAt(0)) >>> 0;
+  return TAG_COLORS[n % TAG_COLORS.length];
+}
+export function tag(name, extra = "") {
+  return `<span class="tag tag-${tagColor(name)} ${extra}">${h(name)}</span>`;
+}
+// グラフ用の色（タグの文字色と同じ系統）。CSS の --tag-*-fg と合わせる
+export const TAG_FG = { gray: "#787774", brown: "#9f6b53", orange: "#d9730d", yellow: "#cb912f", green: "#448361", blue: "#337ea9", purple: "#9065b0", pink: "#c14c8a", red: "#d44c47" };

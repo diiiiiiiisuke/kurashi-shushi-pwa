@@ -1,8 +1,9 @@
 // 返済: 返済先の管理とシミュレーション（docs/spec-v2.md 2.2）
-import { fmt, localDate, monthLabel, sumBy } from "../util.js";
+import { fmt, localDate, monthLabel, shortMonth, sumBy } from "../util.js";
 import { simulateAll, schedule } from "../calc/simulation.js";
 import { toSimItem, firstPaymentMonth, debtPayments } from "../calc/debt.js";
-import { drawBalanceLines, COLORS } from "./chart.js";
+import { buildProjection, speedTable } from "../calc/projection.js";
+import { drawProjection, drawSpeed, COLORS } from "./chart.js";
 import { h, panel, metric, bar, emptyNote, METHOD_LABEL, KIND_LABEL, txRow } from "./common.js";
 
 function model(state) {
@@ -16,6 +17,29 @@ function model(state) {
   const budget = state.settings.repaymentBudget || minTotal;
   const plan = simulateAll(live, budget, state.settings.strategy, start);
   return { debts, items, live, start, minOnly, plan, minTotal, budget };
+}
+
+// 予測の線の色: 最低返済額だけ＝グレー、それ以外は順に
+const SCENARIO_COLORS = ["#147c82", "#337ea9", "#9065b0", "#d9730d"];
+// budget: 全体のグラフは設定額、返済先の詳細は 0（最低返済額を基準に +1万・+3万 を比べる）
+function projection(state, debts, budget) {
+  const p = buildProjection(debts, state.transactions, localDate(), budget, state.settings.strategy);
+  let k = 0;
+  for (const sc of p.scenarios) sc.color = sc.isMin ? COLORS.muted : SCENARIO_COLORS[k++ % SCENARIO_COLORS.length];
+  return p;
+}
+
+// 残債の推移グラフ（実績＋予測）の枠と凡例・表
+function projectionBlock(p, canvasId, title) {
+  const rows = p.scenarios.map(sc => `<tr class="${sc.isSelected ? "selected" : ""}">
+    <td><span class="swatch" style="background:${sc.color}"></span>${sc.isMin ? "最低返済額だけ" : `毎月 ${fmt(sc.budget)}`}${sc.isSelected && !sc.isMin ? " <small>（設定）</small>" : ""}</td>
+    <td>${sc.result.payable ? monthLabel(sc.result.payoffMonth) : "完済できません"}</td>
+    <td>${sc.result.payable ? monthsText(sc.result.months) : "—"}</td>
+    <td>${sc.result.payable ? fmt(sc.result.totalInterest) : "—"}</td></tr>`).join("");
+  return `<h3 class="sub">${title}</h3>
+    <canvas id="${canvasId}" aria-label="残債の推移グラフ。実線が実績、点線が予測"></canvas>
+    <div class="legend"><span class="key solid-line">実績の残債</span><span class="key dash-line">予測の残債（点線）</span><span class="key bar-past">返済額（実績）</span><span class="key bar-future">返済額（予測）</span></div>
+    <div class="table-wrap plain"><table><thead><tr><th>返済スピード</th><th>完済</th><th>期間</th><th>利息の合計</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 const monthsText = n => (n >= 12 ? `${Math.floor(n / 12)}年${n % 12 ? `${n % 12}か月` : ""}` : `${n}か月`);
@@ -35,22 +59,43 @@ export function renderSimResult(app) {
     ? `<p class="good">${a.months > b.months ? `<strong>${monthsText(a.months - b.months)}</strong>早く完済し、` : ""}利息が <strong>${fmt(a.totalInterest - b.totalInterest)}</strong> 減ります</p>` : "";
   return `${warn.map(w => `<p class="notice">${w}</p>`).join("")}
     <div class="compare">${col("最低返済額だけ", a)}${col(`毎月 ${fmt(m.budget)}`, b)}</div>${saved}
-    <canvas id="debtChart" aria-label="残債の推移グラフ"></canvas>
-    <div class="legend"><span class="key muted-line">最低返済額だけ</span><span class="key plan-line">この条件</span></div>
+    ${projectionBlock(projection(app.state, m.debts, app.state.settings.repaymentBudget), "debtChart", "残債の推移（実績と予測）")}
+    ${speedBlock(app, m)}
     <h3 class="sub">返済先ごとの完済月（この条件）</h3>
     <div class="list">${b.perDebt.map(d => `<div class="list-row"><span>${h(d.name)}</span><span>${d.payoffMonth ? monthLabel(d.payoffMonth) : "—"} <small class="muted">利息 ${fmt(d.totalInterest)}</small></span></div>`).join("")}</div>
     <p class="muted small">月割りの概算です（実際は日割り計算のため数百円程度ずれます）。</p>`;
 }
 
-export function afterSim(app) {
-  const canvas = document.querySelector("#debtChart");
+function speedBlock(app, m) {
+  const { rows } = speedTable(m.live, m.start, app.state.settings.repaymentBudget, app.state.settings.strategy);
+  if (rows.length < 2) return "";
+  return `<h3 class="sub">返済スピードの比較 — 毎月いくら返すと、いつ完済できるか</h3>
+    <canvas id="speedChart" aria-label="毎月の返済額ごとの完済までの月数と利息のグラフ"></canvas>
+    <div class="legend"><span class="key bar-speed">完済までの月数（棒）</span><span class="key interest-line">利息の合計（点線）</span><span class="key bar-selected">今の設定</span></div>
+    <div class="table-wrap plain"><table><thead><tr><th>毎月</th><th>完済</th><th>期間</th><th>利息</th><th>最低だけと比べて</th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="${r.isSelected ? "selected" : ""}"><td>${fmt(r.amount)}${r.isMin ? " <small>最低</small>" : ""}</td>
+      <td>${r.payable ? monthLabel(r.payoffMonth) : "完済できません"}</td><td>${r.payable ? monthsText(r.months) : "—"}</td><td>${r.payable ? fmt(r.totalInterest) : "—"}</td>
+      <td>${r.savedMonths ? `${monthsText(r.savedMonths)}早い・利息 −${fmt(r.savedInterest)}` : "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+function drawProjectionFor(app, debts, canvasId, budget) {
+  const canvas = document.querySelector(`#${canvasId}`);
   if (!canvas) return;
-  const m = model(app.state);
-  const start = sumBy(m.live, x => x.balance);
-  drawBalanceLines(canvas, [
-    { color: COLORS.muted, dashed: true, start, points: m.minOnly.timeline },
-    { color: COLORS.income, start, points: m.plan.timeline },
-  ]);
+  const p = projection(app.state, debts, budget);
+  drawProjection(canvas, p, p.months.map(shortMonth));
+}
+
+export function afterSim(app) {
+  const state = app.state;
+  const detail = state.debts.find(x => x.id === app.ctx.debtId);
+  if (detail) return drawProjectionFor(app, [detail], "debtDetailChart", 0);
+  drawProjectionFor(app, state.debts.filter(d => !d.archived), "debtChart", state.settings.repaymentBudget);
+  const speed = document.querySelector("#speedChart");
+  if (speed) {
+    const m = model(state);
+    drawSpeed(speed, speedTable(m.live, m.start, state.settings.repaymentBudget, state.settings.strategy).rows);
+  }
 }
 
 function renderList(app) {
@@ -119,6 +164,7 @@ function renderDetail(app, d) {
         <button type="button" class="secondary" data-action="archive-debt" data-id="${h(d.id)}">${d.archived ? "返済中に戻す" : "完済済みにする"}</button>
       </div>
     </section>
+    ${it.balance > 0 ? panel("残債の推移", `${projectionBlock(projection(state, [d], 0), "debtDetailChart", "この返済先だけを、毎月いくら返すと")}<p class="muted small">「毎月 ◯円」は、この返済先に毎月まとめて返した場合です。</p>`, { eyebrow: "CHART" }) : ""}
     ${panel("返済予定表", rows.length ? `<div class="table-wrap"><table><thead><tr><th>月</th><th>返済額</th><th>利息</th><th>元金</th><th>残高</th></tr></thead><tbody>
       ${rows.map(r => `<tr><td>${monthLabel(r.month).replace("年", "/").replace("月", "")}</td><td>${fmt(r.payment)}</td><td>${fmt(r.interest)}</td><td>${fmt(r.principal)}</td><td>${fmt(r.balance)}</td></tr>`).join("")}
       </tbody></table></div><p class="muted small">最低返済額だけ払った場合。利息の合計 ${fmt(sumBy(rows, r => r.interest))}</p>`

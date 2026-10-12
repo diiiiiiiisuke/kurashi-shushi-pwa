@@ -47,3 +47,13 @@ export function firstPaymentMonth(debts, today, transactions = []) {
   const d = new Date(y, m, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+// ある日（その日の終わり）時点の残高を、基準残高と返済記録の元金から逆算する（spec-v3.md 4.1）
+export function balanceAt(debt, transactions, date) {
+  const pays = transactions.filter(t => t.debtId === debt.id);
+  const p = t => Number(t.principal) || 0;
+  if (date >= debt.baseDate) {
+    return Math.max(0, debt.baseBalance - pays.filter(t => t.date >= debt.baseDate && t.date <= date).reduce((n, t) => n + p(t), 0));
+  }
+  return debt.baseBalance + pays.filter(t => t.date > date && t.date < debt.baseDate).reduce((n, t) => n + p(t), 0);
+}
