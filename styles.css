@@ -123,9 +123,13 @@ dialog form { padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); }
 .form-error { color: var(--red); font-weight: 700; font-size: 14px; margin-bottom: 8px; }
 .field { display: block; margin: 12px 0; min-width: 0; }
 .field-label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
-.field input:not([type=checkbox]):not([type=radio]):not([type=range]), .field select { width: 100%; padding: 11px; border: 1px solid #bfcfd1; border-radius: 9px; background: #fff; font-size: 16px; min-height: 44px; }
+.field input:not([type=checkbox]):not([type=radio]):not([type=range]), .field select { width: 100%; min-width: 0; max-width: 100%; padding: 11px; border: 1px solid #bfcfd1; border-radius: 9px; background: #fff; font-size: 16px; min-height: 44px; }
 .field small, .hint { color: var(--muted); font-size: 12px; display: block; margin-top: 4px; line-height: 1.5; }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+/* iOSの日付入力も列の幅に収め、隣の支払方法と高さを揃える */
+.field input[type=date] { appearance: none; -webkit-appearance: none; height: 46px; }
+.field input[type=date]::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+.two-col .field select { height: 46px; }
 .check { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: 14px; }
 .check input { width: 20px; height: 20px; accent-color: var(--teal); }
 .sheet-actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
