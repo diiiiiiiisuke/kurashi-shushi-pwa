@@ -22,6 +22,7 @@
 │   ├── main.js         起動・タブ切り替え・ボタン操作（data-action）のまとめ役
 │   ├── store.js        保存・読み込み・v1→v2 移行・定期取引の自動作成
 │   ├── util.js         金額・日付・エスケープなどの共通関数
+│   ├── crypto.js       PIN のハッシュ化・バックアップの暗号化（Web Crypto）
 │   ├── calc/           計算（DOM に触らない純粋関数。テスト対象）
 │   │   ├── debt.js         返済先の現在残高・利息と元金の分割
 │   │   ├── simulation.js   返済シミュレーション
@@ -35,7 +36,9 @@
 ├── package.json        依存なし。js/ を ES Modules として Node で読むためだけ
 ├── AGENTS.md / CLAUDE.md / README.md
 ├── docs/               指示書・仕様・設計・ToDo・判断記録・作業ログ
-├── scripts/check.sh    構文・ASSETS・テスト・データ混入のチェック
+├── scripts/check.sh    構文・ASSETS・テスト・セキュリティ・データ混入のチェック
+├── scripts/security-check.mjs  外部通信・CSP・ワークフロー権限の自動チェック
+├── SECURITY.md         脆弱性の報告方法
 └── .github/workflows/  CI（check.sh を実行）
 ```
 
@@ -54,9 +57,18 @@
 6. ユーザー入力・インポートしたデータをHTMLに出すときは、IDも含めて必ず `escapeHtml()` を通す。
 7. **`index.html` の Content-Security-Policy を緩めない。** 外部通信を禁止してデータ流出を防いでいる。詳しくは `docs/security.md`。
 
+## セキュリティのルール（必ず守る。詳しくは `docs/security.md`）
+
+- **次のファイルは、オーナーが依頼文で明示的に許可したときだけ変更する**: `index.html` の Content-Security-Policy、`scripts/security-check.mjs`、`.github/workflows/`、`js/crypto.js`、`js/ui/lock.js`
+- 外部への通信（fetch・WebSocket など）、外部URL、外部のスクリプト・フォント・解析タグを追加しない。`scripts/security-check.mjs` が CI で止める。**チェックを緩めて通すことは禁止**
+- `localStorage` は `js/store.js` 以外で使わない
+- 実在の家計データ・カード名・カード番号・口座番号・PIN・パスワードをコード・テスト・ドキュメント・Issue・PR に書かない（オーナーのカード名もリポジトリに書かない）
+- プルリクエストは `.github/pull_request_template.md` のセキュリティ確認欄を埋める
+- `main` へ直接 push しない。必ずプルリクエストを作り、マージはオーナーが行う
+
 ## 現在進行中の作業
 
-v2（`docs/spec-v2.md`）・v3（`docs/spec-v3.md`: Notion風DB・カード別・返済グラフ）・v4（`docs/spec-v4.md`: 保有クレカの登録・収支と返済のグラフ）は実装済み。次は `docs/roadmap.md` の「次にやる」から。仕様にない判断が必要なときは勝手に決めず、`docs/spec-v2.md` の「要確認事項」に追記してオーナーに確認する。
+v2（`docs/spec-v2.md`）・v3（`docs/spec-v3.md`: Notion風DB・カード別・返済グラフ）・v4（`docs/spec-v4.md`: 保有クレカの登録・収支と返済のグラフ）・セキュリティ強化（PINロック・暗号化バックアップ・自動チェック、`docs/security.md`）は実装済み。次は `docs/roadmap.md` の「次にやる」から。仕様にない判断が必要なときは勝手に決めず、`docs/spec-v2.md` の「要確認事項」に追記してオーナーに確認する。
 
 ## 作業の流れ（毎回）
 

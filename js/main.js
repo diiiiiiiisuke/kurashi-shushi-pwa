@@ -1,5 +1,5 @@
 // 起動・画面の切り替え・ボタン操作のまとめ役
-import { load, save, generateRecurring, migrate } from "./store.js";
+import { load, save, generateRecurring, migrate, resetAll } from "./store.js";
 import { localDate, monthOf, addMonths, monthLabel, nowIso } from "./util.js";
 import { renderHome } from "./ui/home.js";
 import { renderRecords, renderRecordList } from "./ui/records.js";
@@ -9,6 +9,8 @@ import { renderSettings } from "./ui/settings.js";
 import { openSheet, initSheet } from "./ui/forms.js";
 import { moveAccount } from "./calc/accounts.js";
 import { afterOverview } from "./ui/overview.js";
+import { initLock, lockNow } from "./ui/lock.js";
+import { isEncryptedBackup } from "./crypto.js";
 
 const VIEWS = {
   home: { render: renderHome, month: true, after: afterOverview },
@@ -27,6 +29,37 @@ const app = {
     try { save(app.state); } catch { app.toast("保存できませんでした。ブラウザの設定を確認してください"); }
     render();
   },
+  render: () => render(),
+  locked: false,
+  // バックアップを保存させる（中身は書き出す直前に作る。PIN のハッシュはこの端末の設定なので含めない）
+  download(obj, encrypted) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }));
+    a.download = `kurashi-shushi-${localDate()}${encrypted ? ".encrypted" : ""}.backup.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    app.state.settings.lastBackupAt = nowIso();
+    app.commit();
+  },
+  exportable() { return { ...app.state, settings: { ...app.state.settings, lock: null } }; },
+  // 読み込んだデータで置き換える。ロックの設定はこの端末のものを残す
+  importData(raw) {
+    const data = migrate(raw);
+    if (!Array.isArray(data.transactions) || !data.transactions.every(t => t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && Number.isFinite(t.amount))) throw new Error("invalid");
+    if (!confirm(`記録 ${data.transactions.length} 件のバックアップを読み込みます。今のデータは置き換わります。よろしいですか？`)) return false;
+    data.settings.lock = app.state.settings.lock;
+    data.settings.lockAfter = app.state.settings.lockAfter;
+    app.state = data;
+    app.commit();
+    app.toast("読み込みました");
+    return true;
+  },
+  resetAll() {
+    if (!confirm("この端末の記録をすべて消して、最初からやり直しますか？\n（バックアップファイルがあれば、あとで読み込んで戻せます）")) return;
+    if (prompt("確認のため「削除」と入力してください") !== "削除") return;
+    resetAll();
+    location.reload();
+  },
   toast(text) {
     const el = document.querySelector("#toast");
     const sheet = document.querySelector("#sheet");
@@ -39,6 +72,7 @@ const app = {
 if (generateRecurring(app.state, localDate())) save(app.state);
 
 function render() {
+  if (app.locked) return;   // ロック中は記録を画面に出さない
   const v = VIEWS[app.ctx.view];
   const main = document.querySelector("#view");
   document.querySelector("#monthControl").hidden = !v.month;
@@ -80,7 +114,11 @@ const actions = {
   // 家計簿DB: 月次の行 → その月の「毎日の家計簿」、分析 → カード別ビュー
   "open-month": d => { app.ctx.month = d.id; setRecordsView("daily"); },
   "records-view": d => { app.ctx.view = "records"; setRecordsView(d.id); window.scrollTo(0, 0); },
-  export: exportData,
+  export: () => openSheet(app, "exportBackup"),
+  "pin-set": () => openSheet(app, "pinSet"),
+  "pin-off": () => openSheet(app, "pinOff"),
+  "lock-now": () => lockNow(app),
+  "reset-all": () => app.resetAll(),
   import: () => document.querySelector("#importFile").click(),
 };
 
@@ -109,6 +147,7 @@ document.addEventListener("change", e => {
   if (e.target.dataset.sim) save(app.state);
   if (e.target.matches("[data-records-view]")) setRecordsView(e.target.value);
   if (e.target.dataset.overview) { app.state.settings[e.target.dataset.overview] = e.target.value; app.commit(); }
+  if (e.target.matches("[data-lock-after]")) { app.state.settings.lockAfter = Number(e.target.value); app.commit(); }
   if (e.target.matches("[data-sort]")) { app.ctx.sort = e.target.value; document.querySelector("#recordList").innerHTML = renderRecordList(app); }
 });
 // 表の行（tr）もキーボードの Enter で開けるようにする
@@ -122,31 +161,14 @@ function setRecordsView(view) {
   app.commit();
 }
 
-function exportData() {
-  app.state.settings.lastBackupAt = nowIso();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(app.state, null, 2)], { type: "application/json" }));
-  a.download = `kurashi-shushi-${localDate()}.backup.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  app.commit();
-  app.toast("バックアップを書き出しました");
-}
-
 document.querySelector("#importFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   e.target.value = "";
   if (!file) return;
-  try {
-    const data = migrate(JSON.parse(await file.text()));
-    if (!Array.isArray(data.transactions) || !data.transactions.every(t => t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && Number.isFinite(t.amount))) throw new Error();
-    if (!confirm(`記録 ${data.transactions.length} 件のバックアップを読み込みます。今のデータは置き換わります。よろしいですか？`)) return;
-    app.state = data;
-    app.commit();
-    app.toast("読み込みました");
-  } catch {
-    alert("読み込めませんでした。くらし収支のバックアップファイル（.json）を選んでください。");
-  }
+  let raw;
+  try { raw = JSON.parse(await file.text()); } catch { return alert("読み込めませんでした。くらし収支のバックアップファイル（.json）を選んでください。"); }
+  if (isEncryptedBackup(raw)) return openSheet(app, "decryptBackup", { payload: raw });
+  try { app.importData(raw); } catch { alert("読み込めませんでした。くらし収支のバックアップファイル（.json）を選んでください。"); }
 });
 
 let deferredInstall;
@@ -158,10 +180,11 @@ document.querySelector("#install").addEventListener("click", async () => {
 });
 
 // 日付が変わったあとに開き直したとき、定期取引を作成して描き直す
+// （ロックの判定を先に済ませるため、少し後に実行する）
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && generateRecurring(app.state, localDate())) app.commit();
+  if (document.visibilityState === "visible") setTimeout(() => { if (generateRecurring(app.state, localDate())) app.commit(); }, 0);
 });
 
 initSheet();
-render();
+initLock(app, render);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");

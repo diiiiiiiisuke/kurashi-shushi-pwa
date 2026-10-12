@@ -12,8 +12,22 @@ export function renderSettings(app) {
   const out = [`<div class="section-heading"><div><p class="eyebrow">SETTINGS</p><h2>設定</h2></div></div>`];
 
   const last = s.settings.lastBackupAt;
+  const lock = s.settings.lock;
+  out.push(panel("セキュリティ", `
+    <div class="row-between"><span>PINロック</span><strong class="${lock ? "income" : "expense"}">${lock ? "🔒 オン" : "オフ"}</strong></div>
+    <p class="muted small">アプリを開くときにPIN（数字4〜8桁）を求めます。スマホを他の人が触ったときに家計を見られないようにします。</p>
+    ${lock ? `<label class="field"><span class="field-label">自動でロックするまで</span><select data-lock-after>
+        <option value="0" ${s.settings.lockAfter === 0 ? "selected" : ""}>アプリを離れたらすぐ</option>
+        <option value="1" ${s.settings.lockAfter === 1 ? "selected" : ""}>アプリを離れて1分後</option>
+        <option value="5" ${s.settings.lockAfter === 5 ? "selected" : ""}>アプリを離れて5分後</option></select></label>` : ""}
+    <div class="button-row">
+      <button type="button" class="${lock ? "secondary" : "primary"}" data-action="pin-set">${lock ? "PINを変更" : "PINロックを設定"}</button>
+      ${lock ? `<button type="button" class="secondary" data-action="lock-now">今すぐロック</button><button type="button" class="danger-text" data-action="pin-off">PINロックを解除</button>` : ""}
+    </div>
+    <p class="muted small">記録はこの端末の中だけに保存され、外部には送信されません（ブラウザの設定で外部との通信を禁止しています）。</p>`, { eyebrow: "SECURITY" }));
+
   out.push(panel("バックアップ", `
-    <p class="muted">記録はこのスマホのブラウザの中だけに保存されています。故障・機種変更・ブラウザのデータ削除に備えて、月に1回は書き出してください。<strong>書き出したファイルはGitHubや人に送るチャットに置かないでください。</strong></p>
+    <p class="muted">記録はこのスマホの中だけに保存されています。故障・機種変更に備えて、月に1回は書き出してください。<strong>パスワードで暗号化して書き出せます。</strong>書き出したファイルはGitHubや人に送るチャットに置かないでください。</p>
     <p>最後のバックアップ: <strong>${last ? `${last.slice(0, 10)}（${daysBetween(last.slice(0, 10), localDate())}日前）` : "まだありません"}</strong></p>
     <div class="button-row"><button type="button" class="primary" data-action="export">書き出す</button><button type="button" class="secondary" data-action="import">読み込む</button></div>`, { eyebrow: "BACKUP" }));
 
@@ -31,6 +45,9 @@ export function renderSettings(app) {
   };
   out.push(panel("カテゴリ", `<h3 class="sub">支出</h3>${catList("expense")}<h3 class="sub">収入</h3>${catList("income")}
     ${archivedList(s.categories.filter(c => c.archived), c => row("edit-category", c.id, h(c.name)))}`, { eyebrow: "CATEGORIES", action: addBtn("add-category", "追加") }));
+
+  out.push(panel("データを消す", `<p class="muted small">機種変更の後や、最初からやり直したいときに使います。消す前にバックアップを書き出してください。</p>
+    <button type="button" class="danger-text" data-action="reset-all">この端末のデータをすべて消す</button>`, { eyebrow: "RESET" }));
 
   out.push(panel("このアプリについて", `<p class="muted">データはこの端末の中だけに保存され、外部には送信されません（外部との通信はブラウザの設定で禁止しています）。アプリのコードは GitHub で公開されていますが、記録したデータは含まれません。</p>`, { eyebrow: "ABOUT" }));
   return out.join("");

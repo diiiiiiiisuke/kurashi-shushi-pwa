@@ -60,6 +60,13 @@ index.html ──> js/main.js
 - `projection.js` の `buildOverview()`: 収支と返済のグラフ用（過去は実績、今月以降の残債は予測）。描画は `ui/chart.js` の `drawOverview()`
 - タグの色: `ui/common.js` の `tagColor()`（名前から Notion の9色を決める）
 
+## セキュリティ（詳しくは [security.md](security.md)）
+
+- `js/crypto.js`: PIN のハッシュ化（PBKDF2）、バックアップの暗号化（AES-GCM）。Web Crypto のみ
+- `js/ui/lock.js`: ロック画面。`app.locked` の間は `render()` が何も描かない。`visibilitychange` で自動ロック
+- `settings.lock`（PIN のハッシュ）と `settings.lockAfter` は端末ごとの設定。書き出すバックアップには含めず、読み込み時は今の端末の設定を残す
+- `scripts/security-check.mjs`: CSP の完全一致、`js/` での通信 API・外部URL・eval の禁止、`localStorage` は `store.js` だけ、ワークフローの権限と SHA 固定を検査（テスト: `tests/security.test.mjs`）
+
 ## Service Worker（`sw.js`）
 
 - ネットワーク優先で、取得したものをキャッシュに保存。オフライン時はキャッシュを返す

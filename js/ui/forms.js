@@ -3,6 +3,7 @@ import { id, nowIso, localDate, monthOf, addMonths, fmt } from "../util.js";
 import { newCategory, CASH_ACCOUNT_ID } from "../store.js";
 import { categoryRank } from "../calc/summary.js";
 import { parseAccountNames, accountUsage } from "../calc/accounts.js";
+import { createPinLock, verifyPin, isValidPin, encryptBackup, decryptBackup } from "../crypto.js";
 import { splitPayment, currentBalance } from "../calc/debt.js";
 import { h, field, options, METHOD_LABEL, KIND_LABEL, ACCOUNT_KIND_LABEL } from "./common.js";
 
@@ -336,7 +337,79 @@ const rebaseKind = {
   submit(app, o, d) { o.debt.baseBalance = num(d.baseBalance); o.debt.baseDate = d.baseDate; },
 };
 
-const KINDS = { tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
+// ───────── PINロック ─────────
+
+const pinInput = (name, label) => field(label, `<input name="${name}" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8" required>`);
+
+const pinSetKind = {
+  title: app => (app.state.settings.lock ? "PINを変更" : "PINロックを設定"),
+  html(app) {
+    return `<p class="hint">アプリを開くときに、数字4〜8桁のPINを求めます。PINはそのまま保存せず、元に戻せない形（ハッシュ）で保存します。<strong>PINを忘れると、この端末のデータは開けなくなります</strong>（バックアップから戻すことはできます）。</p>
+      ${app.state.settings.lock ? pinInput("current", "今のPIN") : ""}
+      ${pinInput("pin", "新しいPIN（数字4〜8桁）")}
+      ${pinInput("confirm", "新しいPIN（もう一度）")}
+      ${buttons()}`;
+  },
+  async submit(app, o, d) {
+    if (app.state.settings.lock && !(await verifyPin(d.current, app.state.settings.lock))) return "今のPINが違います";
+    if (!isValidPin(d.pin)) return "PINは数字4〜8桁にしてください";
+    if (/^(\d)\1+$/.test(d.pin) || "0123456789".includes(d.pin) || "9876543210".includes(d.pin)) return "同じ数字の繰り返しや連番は避けてください";
+    if (d.pin !== d.confirm) return "確認用のPINが一致しません";
+    app.state.settings.lock = await createPinLock(d.pin);
+    app.toast("PINロックを設定しました");
+  },
+};
+
+const pinOffKind = {
+  title: () => "PINロックを解除",
+  html: () => `<p class="hint">解除すると、PINなしでアプリが開くようになります。</p>${pinInput("current", "今のPIN")}${buttons()}`,
+  async submit(app, o, d) {
+    if (!(await verifyPin(d.current, app.state.settings.lock))) return "PINが違います";
+    app.state.settings.lock = null;
+    app.toast("PINロックを解除しました");
+  },
+};
+
+// ───────── バックアップ（暗号化） ─────────
+
+const passInput = (name, label) => field(label, `<input name="${name}" type="password" autocomplete="new-password" minlength="8">`);
+
+const exportBackupKind = {
+  title: () => "バックアップを書き出す",
+  html: () => `
+    <p class="hint"><strong>パスワードで暗号化して書き出す</strong>のがおすすめです。iCloud などに保存しても、パスワードを知らない人は中身を読めません。パスワードを忘れると読み込めなくなるので、パスワード管理アプリなどに保存してください。</p>
+    ${passInput("password", "パスワード（8文字以上）")}
+    ${passInput("confirm", "パスワード（もう一度）")}
+    ${yesNo("plain", false, "暗号化しないで書き出す（おすすめしません）")}
+    ${buttons()}`,
+  onInput() {
+    const f = form(), plain = f.elements.plain.checked;
+    for (const n of ["password", "confirm"]) { f.elements[n].disabled = plain; f.elements[n].closest(".field").classList.toggle("dim", plain); }
+  },
+  async submit(app, o, d) {
+    if (d.plain === "on") {
+      app.download(app.exportable(), false);
+      app.toast("書き出しました（暗号化なし）");
+      return;
+    }
+    if ((d.password || "").length < 8) return "パスワードは8文字以上にしてください";
+    if (d.password !== d.confirm) return "確認用のパスワードが一致しません";
+    app.download(await encryptBackup(app.exportable(), d.password), true);
+    app.toast("暗号化して書き出しました");
+  },
+};
+
+const decryptBackupKind = {
+  title: () => "暗号化されたバックアップを読み込む",
+  html: () => `<p class="hint">書き出したときのパスワードを入力してください。</p>${field("パスワード", `<input name="password" type="password" autocomplete="current-password" required>`)}${buttons()}`,
+  async submit(app, o, d) {
+    let data;
+    try { data = await decryptBackup(o.payload, d.password); } catch { return "パスワードが違うか、ファイルが壊れています"; }
+    try { if (!app.importData(data)) return; } catch { return "くらし収支のバックアップではありません"; }
+  },
+};
+
+const KINDS = { pinSet: pinSetKind, pinOff: pinOffKind, exportBackup: exportBackupKind, decryptBackup: decryptBackupKind, tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
 
 let current = null;
 
@@ -367,13 +440,16 @@ export function initSheet() {
       dialog().close(); app.commit();
     }
   });
-  f.addEventListener("submit", e => {
+  f.addEventListener("submit", async e => {
     e.preventDefault();
     if (!current) return;
     const { app, k, opts } = current;
     const data = Object.fromEntries(new FormData(f));
     for (const el of f.querySelectorAll("select:disabled")) data[el.name] = el.value;
-    const result = k.submit(app, opts, data, e.submitter?.value);
+    const btns = f.querySelectorAll("button");
+    btns.forEach(b => (b.disabled = true));   // 暗号化などの処理中に二度押ししない
+    let result;
+    try { result = await k.submit(app, opts, data, e.submitter?.value); } finally { btns.forEach(b => (b.disabled = false)); }
     const err = f.querySelector(".form-error");
     if (typeof result === "string" && result !== "keep-open") { err.textContent = result; err.hidden = false; return; }
     err.hidden = true;

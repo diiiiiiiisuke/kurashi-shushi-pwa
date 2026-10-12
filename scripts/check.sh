@@ -22,6 +22,9 @@ if (missing.length || unlisted.length) { console.error("sw.js の ASSETS がず�
 node --test tests/*.test.mjs > /tmp/kurashi-test.log 2>&1 || { cat /tmp/kurashi-test.log; exit 1; }
 grep -E '^# (pass|fail)' /tmp/kurashi-test.log
 
+# セキュリティ: 外部通信・外部スクリプト・CSPの変更・ワークフローの権限を確認
+node scripts/security-check.mjs
+
 # 家計データらしきファイルが紛れていないか
 if git ls-files | grep -Ei '\.backup\.json$|^private-data/|\.(csv|pdf)$'; then echo "家計データらしきファイルがコミットされています"; exit 1; fi
 echo "check: OK"

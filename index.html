@@ -37,6 +37,21 @@
       <button type="button" data-view="debts">返済</button>
       <button type="button" data-view="settings">設定</button>
     </nav>
+    <!-- ロック画面（PIN）。ロック中は記録を画面に出さない（js/ui/lock.js） -->
+    <section id="lockScreen" class="lock-screen" hidden aria-label="ロック中">
+      <form class="lock-box" novalidate>
+        <div class="lock-icon" aria-hidden="true">🔒</div>
+        <h2>くらし収支</h2>
+        <p class="muted">PINを入力してください</p>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" aria-label="PIN">
+        <p class="form-error" data-lock-error role="alert"></p>
+        <button class="primary" type="submit">開く</button>
+        <details class="lock-forgot"><summary>PINを忘れた場合</summary>
+          <p>PINは元に戻せない形で保存しているため、確認・再発行はできません。この端末のデータを消して最初からやり直し、バックアップファイルがあれば読み込んで戻してください。</p>
+          <button type="button" class="danger-text" data-lock-reset>この端末のデータを消して最初から</button>
+        </details>
+      </form>
+    </section>
     <dialog id="sheet"><form id="sheetForm" novalidate></form></dialog>
     <div id="toast" class="toast" role="status" hidden></div>
     <input id="importFile" type="file" accept="application/json,.json" hidden />

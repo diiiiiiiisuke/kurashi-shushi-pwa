@@ -251,3 +251,14 @@ table.db .c-title { max-width: 8.5em; }
 .overview-metrics { margin-top: 12px; }
 .overview-metrics .metric strong { font-size: 16px; }
 .list-item > .muted { white-space: nowrap; flex: none; }
+
+/* ───────── セキュリティ: ロック画面（docs/security.md） ───────── */
+body.locked main, body.locked nav, body.locked .fab, body.locked .topbar { visibility: hidden; }
+.lock-screen { position: fixed; inset: 0; z-index: 50; background: var(--navy); display: grid; place-items: center; padding: 24px; }
+.lock-box { background: #fff; border-radius: 18px; padding: 28px 22px; width: min(360px, 100%); text-align: center; display: grid; gap: 10px; }
+.lock-icon { font-size: 36px; }
+.lock-box input { font-size: 28px; letter-spacing: .4em; text-align: center; padding: 12px; border: 1px solid #bfcfd1; border-radius: 12px; width: 100%; }
+.lock-box .form-error { min-height: 1.2em; margin: 0; }
+.lock-forgot { text-align: left; font-size: 13px; color: var(--muted); }
+.lock-forgot summary { cursor: pointer; padding: 6px 0; }
+.field.dim { opacity: .4; }

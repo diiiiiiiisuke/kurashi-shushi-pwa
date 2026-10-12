@@ -1,41 +1,87 @@
 # セキュリティとデータの守り方
 
-## 仕組み上どこにデータがあるか
+最終更新: 2026-10-12（PINロック・暗号化バックアップ・自動チェックを追加）
+
+## 1. どこにデータがあるか
 
 | 場所 | 家計データがあるか |
 | --- | --- |
-| GitHub（このリポジトリ） | **ない**。コードとドキュメントだけ |
+| GitHub（このリポジトリ・公開） | **ない**。コードとドキュメントだけ |
 | GitHub Pages（アプリの配信） | **ない**。アプリのファイルを配るだけで、入力内容は受け取らない |
-| スマホのブラウザ（localStorage） | **ある**。入力したデータはここだけに保存される |
-| バックアップJSON（書き出した場合） | **ある**。暗号化されていない平文 |
+| スマホのアプリ（ブラウザの保存領域） | **ある**。入力したデータはここだけに保存される |
+| 書き出したバックアップ | **ある**。パスワードで暗号化して書き出せる（推奨） |
 
-アプリは外部と通信しません。さらに `index.html` の Content-Security-Policy で、外部サーバーへの通信・外部スクリプトの読み込みをブラウザが拒否するようにしています（2026-10-12 確認済み: `fetch("https://example.com")` がブロックされる）。
+## 2. 守りたいことと、対策
 
-## アプリ側で実施している対策
+| 心配なこと | 対策 | 担当 |
+| --- | --- | --- |
+| アプリが家計データを外部に送る | CSP で外部通信をブラウザが拒否。`scripts/security-check.mjs` が通信・外部URL・外部スクリプトを含む変更を CI で止める | 自動 |
+| AI（Codex/Claude）がうっかり危険な変更を入れる | 上の自動チェック＋PRテンプレートのセキュリティ確認欄＋**マージは人が行う**＋`AGENTS.md` の禁止事項 | 自動＋オーナー |
+| GitHub アカウントを乗っ取られてコードを書き換えられる | 2段階認証（設定済み）、`main` の保護ルール（4章） | オーナー |
+| CI の仕組みを悪用される | ワークフローは読み取り専用の権限・アクションはコミットSHAで固定・`pull_request_target` と secrets を使わない（自動チェックで確認） | 自動 |
+| スマホを他の人に触られて家計を見られる | アプリの **PINロック**（自動ロック: すぐ／1分／5分）。ロック中は記録を画面に出さない | オーナーが設定 |
+| バックアップファイルを他人に見られる | **パスワードで暗号化して書き出す**（AES-GCM 256bit、PBKDF2-SHA256 60万回） | オーナー |
+| 細工したバックアップを読み込んでしまう | 読み込み時に型を整形し、表示はすべて `escapeHtml()` を通す | 自動 |
+| 同じドメインの別サイトからデータを読まれる | `diiiiiiiisuke.github.io` で別のサイトを公開しない | オーナー |
 
-- **CSP（Content-Security-Policy）** で `connect-src 'self'` / `script-src 'self'`。うっかり解析タグや外部APIを足しても通信できない
-- 画面に出すユーザー入力・インポートしたデータはすべて `escapeHtml()` を通す（細工したバックアップを読み込んでもスクリプトが動かない）
+## 3. アプリ側の対策（実装済み）
+
+- **CSP（Content-Security-Policy）**: `connect-src 'self'` / `script-src 'self'` など。外部への通信・外部スクリプトはブラウザが拒否する
+- **PINロック**（設定 → セキュリティ）: 数字4〜8桁。PIN はそのまま保存せず PBKDF2-SHA256（20万回、ソルト付き）のハッシュだけを保存。同じ数字の繰り返し・連番は使えない。5回間違えると30秒ずつ待ち時間が増える。ロック中は記録を画面（DOM）に出さない。PIN のハッシュはバックアップに含めない（端末ごとの設定）
+- **暗号化バックアップ**（設定 → バックアップ → 書き出す）: パスワード8文字以上。AES-GCM（改ざんも検出）。読み込み時にパスワードを聞く。暗号化しない書き出しも選べるが非推奨
+- **データを消す**（設定 → データを消す／ロック画面 → PINを忘れた場合）: 二重確認のうえ、この端末のデータを消す
+- ユーザー入力・読み込んだデータは表示前に `escapeHtml()`、数値欄は読み込み時に数値へ整形
 - `referrer` を送らない
-- データは外部に送らず、端末内だけに保存する
 
-## オーナー自身がやること（大事な順）
+**限界（正直に）**: PINロックは「画面を見られない」ための鍵で、端末内のデータそのものは暗号化していない。脱獄や専門的な解析をされた場合は読める可能性がある。いちばん大事なのは、iPhone 本体のパスコード・Face ID。端末内のデータ暗号化は roadmap の候補。
 
-1. **GitHubアカウントに2段階認証を設定する**
-   アプリのコードを書き換えられると、次に開いたときにデータを盗むコードが動く可能性がある。CSPも同じリポジトリにあるので、アカウントを乗っ取られたら防げない。いちばん重要。
-2. **同じ `diiiiiiiisuke.github.io` で別のサイトを公開しない**
-   ブラウザの保存領域は「ドメイン単位」で共有される。同じアカウントで別のリポジトリをGitHub Pagesで公開すると、そのサイトのJavaScriptからこのアプリのデータを読めてしまう。別のアプリを公開するなら、別アカウント・独自ドメイン・Cloudflare Pages など **別ドメイン** にする。
-3. **スマホに画面ロック（パスコード・生体認証）をかける**
-   データは端末内で暗号化されずに保存される。スマホを開ける人ならアプリも開ける。
-4. **バックアップJSONの置き場所に注意する**
-   平文なので、GitHub・公開フォルダ・人に送るチャットには置かない。iCloud／Googleドライブなど自分だけのストレージに保存する。
-5. **AIや公開の場に実データを貼らない**
-   リポジトリは公開なので、Issue・プルリクエスト・コメントに金額入りのスクリーンショットや実データを載せない。Codex／Claudeに不具合を相談するときも、ダミーの数値を使う。
-6. **AIが作った変更を確認してからマージする**
-   特に `index.html` のCSP、外部URL（`http`）、`fetch` が増えていないかを見る。CIの check が赤なら `main` に入れない。
-7. **共用PCでは使わない**
-   ブラウザの拡張機能はページのデータを読めることがある。
+## 4. オーナーが GitHub で行う設定（スマホのブラウザで github.com を開いて行う）
 
-## GitHub 2段階認証の設定手順（スマホのみで可）
+Claude/Codex の権限ではリポジトリの設定画面を変更できないため、以下はオーナーが行う。所要10分ほど。
+
+### 4.1 `main` ブランチを保護する（最重要）
+リポジトリ → **Settings → Rules → Rulesets → New ruleset → New branch ruleset**
+1. Ruleset name: `main保護`、Enforcement status: **Active**
+2. Target branches → **Add target → Include default branch**
+3. Rules で次をオンにする
+   - **Restrict deletions**（削除禁止）
+   - **Block force pushes**（履歴の書き換え禁止）
+   - **Require a pull request before merging**（Required approvals は `0` のまま。1人で運用するため）
+   - **Require status checks to pass** → **Add checks** で `check` を追加
+4. **Create** を押す
+
+→ これで、AI も自分も `main` に直接書き込めず、CI（セキュリティチェック込み）が緑のプルリクエストしかマージできなくなる。
+
+### 4.2 Actions の権限を最小にする
+**Settings → Actions → General**
+- Actions permissions: **Allow diiiiiiiisuke, and select non-diiiiiiiisuke, actions and reusable workflows** → **Allow actions created by GitHub** だけにチェック
+- Workflow permissions: **Read repository contents and packages permissions**
+- **Allow GitHub Actions to create and approve pull requests** のチェックを外す
+
+### 4.3 秘密情報の検出をオンにする
+**Settings → Code security**（Advanced Security）
+- **Secret Protection（Secret scanning）** と **Push protection** を Enable（公開リポジトリは無料）
+- **Private vulnerability reporting** を Enable（SECURITY.md の報告窓口）
+- Dependabot alerts を Enable（npm パッケージは使っていないが、念のため）
+
+### 4.4 GitHub Pages
+**Settings → Pages** → **Enforce HTTPS** にチェックが入っていることを確認
+
+### 4.5 AI に渡す権限を絞る
+- GitHub → 右上アイコン → **Settings → Applications → Installed GitHub Apps** で、ChatGPT（Codex）・Claude の **Repository access** を **Only select repositories → kurashi-shushi-pwa** にする
+- Codex の環境設定で、インターネットアクセスは**オフ（または必要最小限）**にする。このリポジトリは外部パッケージ不要なので、オフでもテストは動く
+
+## 5. オーナーの普段の習慣
+
+1. **iPhone 本体にパスコード・Face ID**（済みのはず）
+2. **アプリの PIN ロックをオン**（設定 → セキュリティ）
+3. **バックアップは月1回、パスワード付きで**。パスワードはパスワード管理アプリ（iPhone の「パスワード」など）に保存
+4. **AI の変更は、PR のセキュリティ確認欄と CI の緑を見てからマージ**。「外部」「通信」「CSP」「workflows」が出てくる変更は特に慎重に
+5. **公開の場（Issue・PR・AIへの相談）に実際の金額・カード番号・口座・スクリーンショットを載せない**。相談はダミーの数値で
+6. **`diiiiiiiisuke.github.io` で別サイトを公開しない**
+7. 共用PCでは使わない
+
+## 6. GitHub 2段階認証の設定手順（済み）
 
 1. 認証アプリを入れる（Google Authenticator / Microsoft Authenticator / iPhoneの「パスワード」アプリ など）
 2. スマホのブラウザで github.com を開き、右上アイコン → Settings → Password and authentication → Enable two-factor authentication
@@ -46,14 +92,15 @@
 
 リカバリーコードや認証アプリの設定キーは、このリポジトリ・Issue・AIへの相談に絶対に書かない。
 
-## AIエージェント（Codex / Claude）への約束
+## 7. AIエージェント（Codex / Claude）への約束
 
-- CSPを緩める（外部ドメインの許可など）、外部通信を追加する変更は、オーナーの明示的な許可なしに行わない
-- 外部CDN・解析タグ・広告・フォントの外部読み込みを入れない
-- テストやサンプルに実在の口座番号・カード番号・氏名を使わない
+`AGENTS.md` の「セキュリティのルール」を参照。要点:
+- CSP・`scripts/security-check.mjs`・`.github/workflows/`・`js/crypto.js`・`js/ui/lock.js` は、オーナーが明示的に許可したときだけ変更する
+- 外部通信・外部URL・外部スクリプトを追加しない。自動チェックを緩めて通すことは禁止
+- 実在のデータ・カード名・番号・パスワードをリポジトリや PR に書かない
+- `main` に直接 push しない。マージはオーナー
 
-## 今後の強化案（roadmap にも記載）
+## 8. 今後の強化案（roadmap にも記載）
 
-- アプリを開くときのパスコードロック
-- パスワードで暗号化したバックアップ（Web Crypto の AES-GCM）
-- 端末内データの暗号化（パスコードから鍵を作る。忘れると復元できないため慎重に設計）
+- 端末内データの暗号化（PIN から鍵を作る。PIN を忘れると復元できないため慎重に設計）
+- Face ID でのロック解除（WebAuthn）
