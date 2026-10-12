@@ -3,6 +3,7 @@ import { fmt, signed, addMonths, shortMonth, monthLabel, sumBy } from "../util.j
 import { trend, inMonth, byCategory, fixedVariable, scopeTotals } from "../calc/summary.js";
 import { drawTrend } from "./chart.js";
 import { h, panel, metric, emptyNote, categoryName } from "./common.js";
+import { accountBreakdown } from "./breakdown.js";
 
 export function renderAnalysis(app) {
   const { state, ctx } = app;
@@ -16,6 +17,9 @@ export function renderAnalysis(app) {
     <div class="legend"><span class="key income">収入</span><span class="key expense">支出</span><span class="key balance">収支</span></div>
     <div class="metrics three">${metric("平均収入", fmt(avg("income")), "income")}${metric("平均支出", fmt(avg("expense")), "expense")}${metric("平均収支", signed(avg("balance")))}</div>
     <p class="muted small">記録のある月（${active.length}か月）の平均</p>`, { eyebrow: "TREND" }));
+
+  out.push(panel(`${monthLabel(ym)}の支払方法別の支出`, accountBreakdown(state, inMonth(state.transactions, ym)) +
+    `<button type="button" class="link" data-action="records-view" data-id="card">カード別の明細を見る ›</button>`, { eyebrow: "BY CARD" }));
 
   const now = byCategory(inMonth(state.transactions, ym), "expense");
   const before = new Map(byCategory(inMonth(state.transactions, prev), "expense").map(x => [x.categoryId, x.amount]));

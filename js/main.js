@@ -18,7 +18,7 @@ const VIEWS = {
 
 const app = {
   state: load(),
-  ctx: { view: "home", month: monthOf(localDate()), filters: { q: "", categoryId: "", scope: "" }, debtId: null, lastDate: null },
+  ctx: { view: "home", month: monthOf(localDate()), filters: { q: "", categoryId: "", scope: "" }, sort: "date-desc", debtId: null, lastDate: null },
   // 状態を変えたら必ずこれを呼ぶ（保存して描き直す）
   commit() {
     generateRecurring(app.state, localDate()); // 定期取引を登録・編集した直後にも反映する
@@ -73,6 +73,9 @@ const actions = {
   "open-debt": d => { app.ctx.debtId = d.id; render(); window.scrollTo(0, 0); },
   "close-debt": () => { app.ctx.debtId = null; render(); },
   "archive-debt": d => { const x = find(app.state.debts, d.id); x.archived = !x.archived; app.toast(x.archived ? "完済済みにしました" : "返済中に戻しました"); app.commit(); },
+  // 家計簿DB: 月次の行 → その月の「毎日の家計簿」、分析 → カード別ビュー
+  "open-month": d => { app.ctx.month = d.id; setRecordsView("daily"); },
+  "records-view": d => { app.ctx.view = "records"; setRecordsView(d.id); window.scrollTo(0, 0); },
   export: exportData,
   import: () => document.querySelector("#importFile").click(),
 };
@@ -98,7 +101,21 @@ document.addEventListener("input", e => {
   document.querySelector("#simResult").innerHTML = renderSimResult(app);
   afterSim(app);
 });
-document.addEventListener("change", e => { if (e.target.dataset.sim) save(app.state); });
+document.addEventListener("change", e => {
+  if (e.target.dataset.sim) save(app.state);
+  if (e.target.matches("[data-records-view]")) setRecordsView(e.target.value);
+  if (e.target.matches("[data-sort]")) { app.ctx.sort = e.target.value; document.querySelector("#recordList").innerHTML = renderRecordList(app); }
+});
+// 表の行（tr）もキーボードの Enter で開けるようにする
+document.addEventListener("keydown", e => {
+  const el = e.target.closest?.("tr[data-action]");
+  if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); actions[el.dataset.action]?.(el.dataset); }
+});
+
+function setRecordsView(view) {
+  app.state.settings.recordsView = view;
+  app.commit();
+}
 
 function exportData() {
   app.state.settings.lastBackupAt = nowIso();

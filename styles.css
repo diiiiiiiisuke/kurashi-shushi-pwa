@@ -166,3 +166,72 @@ dialog form { padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); }
 .cat-row small { white-space: nowrap; }
 table { font-size: 12px; }
 th, td { padding: 7px 4px; }
+
+/* ───────── v3: Notion風DB・タグ・カード別・返済グラフ（docs/spec-v3.md） ───────── */
+:root {
+  --tag-gray-bg: #e3e2e0; --tag-gray-fg: #32302c; --tag-brown-bg: #eee0da; --tag-brown-fg: #442a1e;
+  --tag-orange-bg: #fadec9; --tag-orange-fg: #49290e; --tag-yellow-bg: #fdecc8; --tag-yellow-fg: #402c1b;
+  --tag-green-bg: #dbeddb; --tag-green-fg: #1c3829; --tag-blue-bg: #d3e5ef; --tag-blue-fg: #183347;
+  --tag-purple-bg: #e8deee; --tag-purple-fg: #412454; --tag-pink-bg: #f5e0e9; --tag-pink-fg: #4c2337;
+  --tag-red-bg: #ffe2dd; --tag-red-fg: #5d1715; --db-line: #e9e9e7; --db-head: #787774;
+}
+.tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 12.5px; line-height: 1.6; white-space: nowrap; max-width: 11em; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.tag-gray { background: var(--tag-gray-bg); color: var(--tag-gray-fg); } .tag-brown { background: var(--tag-brown-bg); color: var(--tag-brown-fg); }
+.tag-orange { background: var(--tag-orange-bg); color: var(--tag-orange-fg); } .tag-yellow { background: var(--tag-yellow-bg); color: var(--tag-yellow-fg); }
+.tag-green { background: var(--tag-green-bg); color: var(--tag-green-fg); } .tag-blue { background: var(--tag-blue-bg); color: var(--tag-blue-fg); }
+.tag-purple { background: var(--tag-purple-bg); color: var(--tag-purple-fg); } .tag-pink { background: var(--tag-pink-bg); color: var(--tag-pink-fg); }
+.tag-red { background: var(--tag-red-bg); color: var(--tag-red-fg); }
+
+.db-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px; }
+.db-head h2 { font-size: 22px; }
+.view-select { appearance: none; -webkit-appearance: none; border: 1px solid var(--db-line); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23787774'/%3E%3C/svg%3E") no-repeat right 10px center; border-radius: 8px; padding: 9px 30px 9px 12px; font-size: 16px; font-weight: 700; color: var(--ink); box-shadow: 0 1px 2px #0000000d; }
+.filters select[data-sort] { grid-column: 1 / -1; }
+.db-summary { font-size: 13px; color: var(--muted); margin: 8px 0; }
+.db-scroll { overflow-x: auto; background: #fff; border: 1px solid var(--db-line); border-radius: 10px; -webkit-overflow-scrolling: touch; }
+table.db { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+table.db th, table.db td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--db-line); white-space: nowrap; }
+table.db thead th { position: static; font-weight: 500; font-size: 12.5px; color: var(--db-head); background: #fbfbfa; }
+table.db td + td, table.db th + th { border-left: 1px solid var(--db-line); }
+table.db .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.db .num small { display: block; }
+table.db .c-title { position: sticky; left: 0; background: #fff; z-index: 1; max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; box-shadow: 1px 0 0 var(--db-line); }
+table.db thead .c-title { background: #fbfbfa; }
+table.db .t-title { font-weight: 600; }
+table.db tbody tr[data-action] { cursor: pointer; }
+table.db tbody tr[data-action]:hover td, table.db tbody tr[data-action]:focus td { background: #f7f7f5; }
+table.db tbody tr.dim td { color: #b4b4b0; }
+table.db tr.group th { background: #f7f7f5; padding: 10px; font-weight: 600; font-size: 13px; position: sticky; left: 0; }
+table.db tr.group th > * { vertical-align: middle; }
+.g-title { margin-right: 6px; }
+.g-count { color: var(--db-head); font-weight: 500; margin-right: 10px; }
+.g-sum { float: right; font-weight: 600; }
+.g-budget { font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 6px; max-width: 320px; }
+.c-budget { min-width: 110px; font-size: 12px; }
+.c-budget .bar { margin-top: 4px; }
+.db-new { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--db-head); padding: 10px; font-size: 14px; cursor: pointer; }
+.db-new:hover { background: #f7f7f5; }
+.db-group { margin-bottom: 18px; }
+
+.acc-list { display: grid; gap: 14px; }
+.acc-head { background: #fff; border: 1px solid var(--db-line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+.panel .acc-head { border: 0; padding: 0; margin: 0; }
+.acc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stack { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: #eee; margin: 8px 0 6px; }
+.stack span { display: block; height: 100%; }
+.stack span + span { box-shadow: -1px 0 0 #fff; }
+.stack-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; }
+
+.swatch { display: inline-block; width: 12px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.table-wrap.plain { max-height: none; margin-top: 8px; }
+tr.selected td { background: var(--pale); font-weight: 700; }
+.key.solid-line::before { background: var(--navy); height: 3px; vertical-align: 3px; width: 16px; }
+.key.dash-line::before { background: repeating-linear-gradient(90deg, var(--teal) 0 5px, transparent 5px 8px); height: 3px; vertical-align: 3px; width: 16px; }
+.key.bar-past::before { background: #5f8f9c; }
+.key.bar-future::before { background: #cfe3e5; outline: 1px dashed #7fa8b5; }
+.key.bar-speed::before { background: #a9cdd0; }
+.key.bar-selected::before { background: var(--teal); }
+.key.interest-line::before { background: repeating-linear-gradient(90deg, #d9730d 0 5px, transparent 5px 8px); height: 3px; vertical-align: 3px; width: 16px; }
+/* グループ見出しは横スクロールしても左に見えるように、合計を名前の隣に置く */
+.g-sum { float: none; margin-left: 2px; }
+table.db { min-width: 520px; }
+table.db .c-title { max-width: 8.5em; }

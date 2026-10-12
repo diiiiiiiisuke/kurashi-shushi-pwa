@@ -34,7 +34,7 @@ export function defaultState() {
     budgets: DEFAULT_BUDGETS.map(([n, amount]) => ({ categoryId: byName(n).id, amount })),
     recurring: [],
     debts: [],
-    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID },
+    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily" },
   };
 }
 
@@ -123,6 +123,7 @@ function sanitize(s) {
   }
   s.settings.repaymentBudget = int(s.settings.repaymentBudget);
   if (s.settings.strategy !== "snowball") s.settings.strategy = "avalanche";
+  if (!["daily", "monthly", "card", "category", "table"].includes(s.settings.recordsView)) s.settings.recordsView = "daily";
 }
 
 // 定期取引: 前回作成した月の翌月から、今日までに日付が来た月の分を作る。作成した件数を返す

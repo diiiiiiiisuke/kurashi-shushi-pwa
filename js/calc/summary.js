@@ -52,3 +52,29 @@ export function categoryRank(txs, today, days = 30) {
   }
   return rank;
 }
+
+// 支払方法別の支出（多い順）。各支払方法の中もカテゴリ別に多い順（spec-v3.md 3章）
+export function byAccount(txs) {
+  const map = new Map();
+  for (const t of txs) {
+    if (t.type !== "expense") continue;
+    const a = map.get(t.accountId) || { accountId: t.accountId, total: 0, count: 0, cats: new Map() };
+    a.total += t.amount; a.count++;
+    a.cats.set(t.categoryId, (a.cats.get(t.categoryId) || 0) + t.amount);
+    map.set(t.accountId, a);
+  }
+  return [...map.values()]
+    .map(a => ({ accountId: a.accountId, total: a.total, count: a.count, categories: [...a.cats].map(([categoryId, amount]) => ({ categoryId, amount })).sort((x, y) => y.amount - x.amount) }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// 月次の管理: 1行＝1か月（新しい順）
+export function monthlyRows(state, endYm, n = 12) {
+  return trend(state.transactions, endYm, n).reverse().map(r => {
+    const txs = inMonth(state.transactions, r.month);
+    const top = byCategory(txs, "expense")[0] || null;
+    const budget = state.budgets.reduce((s, b) => s + b.amount, 0);
+    const budgetUsed = txs.filter(t => t.type === "expense" && state.budgets.some(b => b.categoryId === t.categoryId)).reduce((s, t) => s + t.amount, 0);
+    return { ...r, count: txs.length, savingRate: r.income ? r.balance / r.income : null, top, budget, budgetUsed };
+  });
+}
