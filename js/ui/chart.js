@@ -11,7 +11,18 @@ function setup(canvas, height) {
   return { ctx, w, h: height };
 }
 
-const short = v => (Math.abs(v) >= 10000 ? `${Math.round(v / 10000)}万` : Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}千` : "0");
+// 小額も0に丸めず、目盛りに必要な桁を残す。
+const short = v => {
+  const unit = Math.abs(v) >= 10000 ? 10000 : Math.abs(v) >= 1000 ? 1000 : 1;
+  return `${+((v / unit).toPrecision(3))}${unit === 10000 ? "万" : unit === 1000 ? "千" : ""}`;
+};
+
+// データを収めつつ、半分の目盛りも読みやすい上限にする。
+function axisLimit(value) {
+  if (value <= 0) return 2;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  return Math.max(2, Math.ceil(value / magnitude) * magnitude);
+}
 
 // 12か月の収入・支出（棒）と収支（線）
 export function drawTrend(canvas, rows, labels) {
@@ -41,7 +52,7 @@ export function drawTrend(canvas, rows, labels) {
   rows.forEach((r, i) => { ctx.fillStyle = COLORS.balance; ctx.beginPath(); ctx.arc(pad.l + i * step + step / 2, y(r.balance), 2.5, 0, 7); ctx.fill(); });
 }
 
-const man = v => (Math.abs(v) >= 10000 ? `${+(v / 10000).toFixed(v % 10000 && Math.abs(v) < 100000 ? 1 : 0)}万` : short(v));
+const man = short;
 
 function line(ctx, pts, color, width, dashed) {
   if (pts.length < 2) return;
@@ -158,10 +169,12 @@ export function drawOverview(canvas, o, labels, mode = "both") {
   const step = (w - pad.l - pad.r) / n;
   const x = i => pad.l + step * (i + 0.5);
   const vals = mode === "net" ? rows.map(r => r.balance) : rows.flatMap(r => [r.income, r.expense]);
-  const maxV = Math.max(1, ...vals) * 1.1, minV = Math.min(0, ...vals) * 1.1;
+  const maxValue = Math.max(0, ...vals);
+  const maxV = maxValue === 0 && Math.min(0, ...vals) < 0 ? 0 : axisLimit(maxValue * 1.1);
+  const minV = Math.min(0, ...vals) < 0 ? -axisLimit(-Math.min(0, ...vals) * 1.1) : 0;
   const yV = v => pad.t + (h - pad.t - pad.b) * (maxV - v) / (maxV - minV);
   const debts = rows.map(r => r.debt).filter(v => v != null);
-  const maxD = Math.max(1, ...debts) * 1.08;
+  const maxD = axisLimit(Math.max(0, ...debts) * 1.08);
   const yD = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxD);
   const nowX = x(o.nowIndex) + step / 2;
 
