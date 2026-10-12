@@ -33,3 +33,10 @@ test("ワークフローの権限・固定されていないアクションを�
 test("コメント内の URL は問題にしない", () => {
   assert.deepEqual(withFile("js/x.js", "// 参考: https://example.com\nconst a = 1;"), []);
 });
+
+test("Cloudflare のヘッダー（_headers）の CSP 変更・他サイトへの読み取り許可を止める", () => {
+  const hd = repo["_headers"];
+  assert.ok(withFile("_headers", hd.replace("frame-ancestors 'none'", "")).some(p => p.includes("_headers")));
+  assert.ok(withFile("_headers", hd + "\n  Access-Control-Allow-Origin: *\n").some(p => p.includes("Access-Control-Allow-Origin")));
+  assert.ok(withFile("_headers", hd.replace("X-Frame-Options: DENY", "")).some(p => p.includes("X-Frame-Options")));
+});

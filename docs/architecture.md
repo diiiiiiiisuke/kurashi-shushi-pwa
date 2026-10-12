@@ -67,6 +67,11 @@ index.html ──> js/main.js
 - `settings.lock`（PIN のハッシュ）と `settings.lockAfter` は端末ごとの設定。書き出すバックアップには含めず、読み込み時は今の端末の設定を残す
 - `scripts/security-check.mjs`: CSP の完全一致、`js/` での通信 API・外部URL・eval の禁止、`localStorage` は `store.js` だけ、ワークフローの権限と SHA 固定を検査（テスト: `tests/security.test.mjs`）
 
+## 公開（[deploy.md](deploy.md)）
+
+- Cloudflare Pages。ビルドコマンド `bash scripts/build-site.sh`、出力 `dist/`（`sw.js` の ASSETS と `_headers` だけ）
+- `_headers` で CSP（index.html の meta と同じ＋`frame-ancestors 'none'`）などのヘッダーを返す
+
 ## Service Worker（`sw.js`）
 
 - ネットワーク優先で、取得したものをキャッシュに保存。オフライン時はキャッシュを返す

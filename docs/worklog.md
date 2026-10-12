@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-12 Claude Code — Cloudflare Pages への移行準備
+
+**オーナーの依頼**: 今後、同じ GitHub アカウントで別のサイトを公開するかもしれないので、今のうちに Cloudflare に移したい
+
+**やったこと**
+- `scripts/build-site.sh`: 公開するファイルだけを `dist/` に集める（docs/・tests/ などは公開しない）。Cloudflare Pages のビルドコマンドに使う
+- `_headers`: CSP（＋`frame-ancestors 'none'`）・X-Frame-Options・nosniff・Referrer-Policy・Permissions-Policy・COOP・HSTS
+- `scripts/check.sh`: `dist/` の中身が `sw.js` の ASSETS＋`_headers` と一致するか確認。`security-check.mjs`: `_headers` の CSP・埋め込み禁止・CORS 許可がないことを確認（テスト追加、計43件）
+- `docs/deploy.md`: オーナー向けの移行手順（Cloudflare アカウント→Pages プロジェクト→新アプリをホーム画面に→古いアプリのデータ削除と GitHub Pages 停止→URL を伝える）
+- `AGENTS.md`・`README.md`・`docs/security.md`・`docs/mobile-workflow.md`・`architecture.md`・`decisions.md`・`roadmap.md` を更新
+
+**検証**: `bash scripts/check.sh` 成功（テスト43件、security: OK、dist/ の中身一致）。Cloudflare 上での動作は、オーナーがプロジェクトを作成した後に確認する
+
+**残課題（オーナー）**: `docs/deploy.md` の手順 1〜5。新しい URL が決まったら README などに反映
+
 ## 2026-10-12 Claude Code — セキュリティ強化（設定まで）
 
 **オーナーの依頼**: 今後 Codex を使うときは md を読んでもらって引き継ぐ。セキュリティ面が気になるので、安全を担保できるように設定まで行ってほしい

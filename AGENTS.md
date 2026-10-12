@@ -9,7 +9,7 @@
 - 目的: オーナーが **毎日の家計簿** と **自分の収支状況（個人・事業・返済）** をスマホで管理する
 - 形式: 依存ライブラリなし・ビルドなしの静的PWA（HTML / CSS / 素のJavaScript の ES Modules）
 - データ保存: 端末の `localStorage`（キー `kurashi-shushi-data-v1`）。サーバーには一切送信しない
-- 公開: GitHub Pages（`main` ブランチのルートを配信）
+- 公開: **Cloudflare Pages**（`main` にマージすると `scripts/build-site.sh` で `dist/` を作って自動公開。手順・URL は `docs/deploy.md`）。旧: GitHub Pages（移行後に停止）
 - オーナーはスマホから GitHub で開発・管理する。日常の開発は **Codex**、Claude Code は一時的な利用
 
 ## ファイル構成
@@ -39,6 +39,8 @@
 ├── scripts/check.sh    構文・ASSETS・テスト・セキュリティ・データ混入のチェック
 ├── scripts/security-check.mjs  外部通信・CSP・ワークフロー権限の自動チェック
 ├── SECURITY.md         脆弱性の報告方法
+├── _headers            Cloudflare Pages が返すセキュリティ用の HTTP ヘッダー
+├── scripts/build-site.sh  公開するファイルだけを dist/ に集める（Cloudflare のビルド）
 └── .github/workflows/  CI（check.sh を実行）
 ```
 
@@ -59,7 +61,7 @@
 
 ## セキュリティのルール（必ず守る。詳しくは `docs/security.md`）
 
-- **次のファイルは、オーナーが依頼文で明示的に許可したときだけ変更する**: `index.html` の Content-Security-Policy、`scripts/security-check.mjs`、`.github/workflows/`、`js/crypto.js`、`js/ui/lock.js`
+- **次のファイルは、オーナーが依頼文で明示的に許可したときだけ変更する**: `index.html` の Content-Security-Policy、`_headers`、`scripts/security-check.mjs`、`scripts/build-site.sh`、`.github/workflows/`、`js/crypto.js`、`js/ui/lock.js`
 - 外部への通信（fetch・WebSocket など）、外部URL、外部のスクリプト・フォント・解析タグを追加しない。`scripts/security-check.mjs` が CI で止める。**チェックを緩めて通すことは禁止**
 - `localStorage` は `js/store.js` 以外で使わない
 - 実在の家計データ・カード名・カード番号・口座番号・PIN・パスワードをコード・テスト・ドキュメント・Issue・PR に書かない（オーナーのカード名もリポジトリに書かない）
@@ -87,4 +89,4 @@ v2（`docs/spec-v2.md`）・v3（`docs/spec-v3.md`: Notion風DB・カード別�
 
 - ローカル: `python3 -m http.server 8000` を実行し、`http://localhost:8000` を開く
 - Service Worker はネットワーク優先なので、オンラインで再読み込みすれば新しい版になる
-- 本番: GitHub Pages（`https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/`）。`main` にマージすると反映される
+- 本番: Cloudflare Pages（URL は `docs/deploy.md`）。`main` にマージすると反映される。プルリクエストごとにプレビュー用URLも作られる
