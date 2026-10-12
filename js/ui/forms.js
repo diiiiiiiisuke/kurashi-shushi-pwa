@@ -162,6 +162,7 @@ const accountKind = {
         ${field("締日（カード）", `<input name="closingDay" type="number" min="1" max="31" inputmode="numeric" value="${a.closingDay ?? ""}">`)}
         ${field("支払日（カード）", `<input name="paymentDay" type="number" min="1" max="31" inputmode="numeric" value="${a.paymentDay ?? ""}">`)}
       </div>
+      <p class="hint">カードの引き落とし予定は締日の翌月払いとして計算します。締日・支払日を登録すると「返済」タブで合計を確認できます。</p>
       ${o.account && o.account.id !== CASH_ACCOUNT_ID && accountUsage(app.state, o.account.id).used ? `<p class="hint">この支払方法は記録で使われているため削除できません。「使わない」にすると、過去の記録は残したまま入力の選択肢から消えます。</p>` : ""}
       ${buttons(o.account && o.account.id !== CASH_ACCOUNT_ID ? deleteButton(accountUsage(app.state, o.account.id).used ? (o.account.archived ? "使用を再開" : "使わない（非表示）") : "削除") : "")}`;
   },

@@ -277,3 +277,10 @@ body.locked main, body.locked nav, body.locked .fab, body.locked .topbar { visib
 .howto { margin-top: 12px; font-size: 14px; }
 .howto summary { cursor: pointer; color: var(--teal); font-weight: 700; padding: 6px 0; }
 .howto ol { padding-left: 20px; line-height: 1.8; margin: 6px 0; }
+
+/* カード別の次回引き落とし額。長い名称は折り返し、金額は1行で表示 */
+.card-payment-row { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.card-payment-row:last-child { border-bottom: 0; }
+.card-payment-row .row-between strong:first-child { min-width: 0; overflow-wrap: anywhere; }
+.card-payment-row .expense { flex-shrink: 0; white-space: nowrap; }
+.card-payment-row > small { display: block; margin: 5px 0 8px; }
