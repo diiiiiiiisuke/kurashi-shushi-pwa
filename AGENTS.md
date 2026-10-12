@@ -39,7 +39,8 @@
 3. **保存データの互換性を壊さない。** `localStorage` の形式を変える場合は、旧形式を読み込めるマイグレーションを `load()` に入れ、`docs/architecture.md` のデータモデルを更新する。
 4. **アプリのファイルを変えたら `sw.js` の `CACHE` の番号を上げる**（例: `kurashi-shushi-v3` → `v4`）。上げないとスマホに古い版が残る。
 5. **UIの文言は日本語。** 金額は `yen.format()` を使う。日付は `localDate()` を使う（`toISOString()` はUTCなので日本時間の朝に前日になる）。
-6. ユーザー入力をHTMLに出すときは必ず `escapeHtml()` を通す。
+6. ユーザー入力・インポートしたデータをHTMLに出すときは、IDも含めて必ず `escapeHtml()` を通す。
+7. **`index.html` の Content-Security-Policy を緩めない。** 外部通信を禁止してデータ流出を防いでいる。詳しくは `docs/security.md`。
 
 ## 作業の流れ（毎回）
 

@@ -1,5 +1,5 @@
 // アプリのファイルを変更したら CACHE の番号を必ず上げる（古いキャッシュが残るのを防ぐ）
-const CACHE = "kurashi-shushi-v3";
+const CACHE = "kurashi-shushi-v4";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", e => {

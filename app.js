@@ -14,7 +14,7 @@ function localDate(d = new Date()) { const z = n => String(n).padStart(2, "0"); 
 function dateValue(value) { return new Date(`${value}T00:00:00`); }
 function isInMonth(date) { const d = dateValue(date); return d.getFullYear() === shownMonth.getFullYear() && d.getMonth() === shownMonth.getMonth(); }
 function sum(items) { return items.reduce((n, x) => n + Number(x.amount || x.balance || 0), 0); }
-function escapeHtml(v) { return String(v ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+function escapeHtml(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
 
 function render() {
   document.querySelector("#monthLabel").textContent = `${shownMonth.getFullYear()}年${shownMonth.getMonth() + 1}月`;
@@ -58,7 +58,7 @@ function renderExpenseChart(transactions) {
 function renderSimulation() {
   const total=sum(state.debts); const payment=Number(state.settings.monthlyRepayment||0); const rate=Number(state.settings.annualRate||0)/1200; const box=document.querySelector("#simulationBars"); const text=document.querySelector("#simulationText"); if(!total||!payment){text.textContent="返済先と毎月の返済額を登録すると、残債の見通しを表示します。";box.innerHTML="";return;} let balance=total, month=0; const points=[balance]; while(balance>0&&month<120){balance=Math.max(0,balance*(1+rate)-payment);month++;if(month%3===0||balance===0)points.push(balance);} const end=new Date();end.setMonth(end.getMonth()+month); text.textContent=`毎月 ${yen.format(payment)} を返済し、年利 ${Number(state.settings.annualRate||0).toFixed(1)}% と仮定した場合、約${month}か月（${end.getFullYear()}年${end.getMonth()+1}月）で完済見込みです。`; const peak=Math.max(...points,1);box.innerHTML=points.map((p,i)=>`<div style="height:${Math.max(4,Math.round(p/peak*145))}px"><span>${i===0?"現在":`${i*3}月`}</span></div>`).join("");
 }
-function renderCards() { const box=document.querySelector("#cardList"); const rows=state.cards||[];box.classList.toggle("empty",!rows.length);box.innerHTML=rows.length?rows.map(c=>`<div class="list-item"><div><strong>${escapeHtml(c.name)}</strong><small>締日 ${c.closingDay||"未設定"}日・支払日 ${c.paymentDay||"未設定"}日</small></div><button class="text-button" data-delete-card="${c.id}">削除</button></div>`).join(""):"カードがありません"; }
+function renderCards() { const box=document.querySelector("#cardList"); const rows=state.cards||[];box.classList.toggle("empty",!rows.length);box.innerHTML=rows.length?rows.map(c=>`<div class="list-item"><div><strong>${escapeHtml(c.name)}</strong><small>締日 ${c.closingDay||"未設定"}日・支払日 ${c.paymentDay||"未設定"}日</small></div><button class="text-button" data-delete-card="${escapeHtml(c.id)}">削除</button></div>`).join(""):"カードがありません"; }
 function renderTransactions() {
   // 表示中の月の取引を日付ごとにまとめ、1日ごとの収支を見出しに出す
   const box = document.querySelector("#transactionList");
@@ -72,14 +72,14 @@ function renderTransactions() {
     const net = sum(items.filter(t => t.type === "income")) - sum(items.filter(t => t.type === "expense"));
     const d = dateValue(date);
     const head = `<div class="day-heading"><span>${d.getMonth() + 1}/${d.getDate()}（${weekday[d.getDay()]}）</span><span class="amount ${net >= 0 ? "income" : "expense"}">${net >= 0 ? "+" : "−"}${yen.format(Math.abs(net))}</span></div>`;
-    return head + items.map(t => { const card=(state.cards||[]).find(c=>c.id===t.paymentMethod); const method=card ? card.name : (t.paymentMethod === "cash" ? "現金・口座" : "未設定"); return `<div class="list-item"><div><strong>${escapeHtml(t.description || t.category)}</strong><small>${escapeHtml(t.scope === "business" ? "事業" : "個人")} · ${escapeHtml(t.category)} · ${escapeHtml(method)}</small></div><div class="item-actions"><span class="amount ${t.type}">${t.type === "income" ? "+" : "−"}${yen.format(t.amount)}</span><button class="text-button" data-edit-transaction="${t.id}">編集</button><button class="text-button" data-delete-transaction="${t.id}">削除</button></div></div>`; }).join("");
+    return head + items.map(t => { const card=(state.cards||[]).find(c=>c.id===t.paymentMethod); const method=card ? card.name : (t.paymentMethod === "cash" ? "現金・口座" : "未設定"); return `<div class="list-item"><div><strong>${escapeHtml(t.description || t.category)}</strong><small>${escapeHtml(t.scope === "business" ? "事業" : "個人")} · ${escapeHtml(t.category)} · ${escapeHtml(method)}</small></div><div class="item-actions"><span class="amount ${t.type}">${t.type === "income" ? "+" : "−"}${yen.format(t.amount)}</span><button class="text-button" data-edit-transaction="${escapeHtml(t.id)}">編集</button><button class="text-button" data-delete-transaction="${escapeHtml(t.id)}">削除</button></div></div>`; }).join("");
   }).join("");
 }
 function renderDebts() {
   const box = document.querySelector("#debtList");
   const rows = [...state.debts].sort((a,b) => b.balance - a.balance);
   box.classList.toggle("empty", !rows.length);
-  box.innerHTML = rows.length ? rows.map(d => `<article class="debt-card"><header><h3>${escapeHtml(d.name)}</h3><span>${escapeHtml(d.kind)}</span></header><p>支払日: 毎月${d.dueDay || "未設定"}日 / 年利: ${d.apr ?? "未設定"}%</p><strong>${yen.format(d.balance)}</strong><p>毎月の予定返済 ${yen.format(d.payment || 0)}</p><button class="text-button" data-delete-debt="${d.id}">削除</button></article>`).join("") : "返済先がありません";
+  box.innerHTML = rows.length ? rows.map(d => `<article class="debt-card"><header><h3>${escapeHtml(d.name)}</h3><span>${escapeHtml(d.kind)}</span></header><p>支払日: 毎月${d.dueDay || "未設定"}日 / 年利: ${d.apr ?? "未設定"}%</p><strong>${yen.format(d.balance)}</strong><p>毎月の予定返済 ${yen.format(d.payment || 0)}</p><button class="text-button" data-delete-debt="${escapeHtml(d.id)}">削除</button></article>`).join("") : "返済先がありません";
 }
 
 const field = (label, input) => `<div class="field"><label>${label}</label>${input}</div>`;
