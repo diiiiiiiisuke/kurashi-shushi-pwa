@@ -59,6 +59,11 @@
 6. ユーザー入力・インポートしたデータをHTMLに出すときは、IDも含めて必ず `escapeHtml()` を通す。
 7. **`index.html` の Content-Security-Policy を緩めない。** 外部通信を禁止してデータ流出を防いでいる。詳しくは `docs/security.md`。
 
+## オーナーとのやりとり
+
+- **オーナーへの説明・質問・報告は、必ず日本語で書く**（専門用語はかみくだいて。英語で返さない）
+- コミットメッセージ・PR の説明・ドキュメントも日本語を基本にする
+
 ## セキュリティのルール（必ず守る。詳しくは `docs/security.md`）
 
 - **次のファイルは、オーナーが依頼文で明示的に許可したときだけ変更する**: `index.html` の Content-Security-Policy、`_headers`、`scripts/security-check.mjs`、`scripts/build-site.sh`、`.github/workflows/`、`js/crypto.js`、`js/ui/lock.js`
