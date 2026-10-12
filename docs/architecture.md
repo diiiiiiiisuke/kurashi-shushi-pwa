@@ -72,6 +72,11 @@ index.html ──> js/main.js
 - Cloudflare Pages。ビルドコマンド `bash scripts/build-site.sh`、出力 `dist/`（`sw.js` の ASSETS と `_headers` だけ）
 - `_headers` で CSP（index.html の meta と同じ＋`frame-ancestors 'none'`）などのヘッダーを返す
 
+## バックアップ（[spec-backup.md](spec-backup.md)）
+
+- `js/calc/backup.js`（催促の判定）、`js/ui/backup.js`（共有シートで保存・ダウンロードへの切り替え・ホームの案内・`storage.persist()`）
+- 起動時（ロック解除後）、7日以上バックアップしていなければ「☁️ バックアップ」シートを1回表示。`settings.backupSnoozeUntil` で翌日まで延期
+
 ## Service Worker（`sw.js`）
 
 - ネットワーク優先で、取得したものをキャッシュに保存。オフライン時はキャッシュを返す

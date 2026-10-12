@@ -11,6 +11,8 @@ import { moveAccount } from "./calc/accounts.js";
 import { afterOverview } from "./ui/overview.js";
 import { initLock, lockNow } from "./ui/lock.js";
 import { isEncryptedBackup } from "./crypto.js";
+import { quickBackup, deliverBackup, snoozeBackup, requestPersistence, status as backupStatusOf } from "./ui/backup.js";
+import { pendingEncrypted } from "./ui/forms.js";
 
 const VIEWS = {
   home: { render: renderHome, month: true, after: afterOverview },
@@ -31,16 +33,7 @@ const app = {
   },
   render: () => render(),
   locked: false,
-  // バックアップを保存させる（中身は書き出す直前に作る。PIN のハッシュはこの端末の設定なので含めない）
-  download(obj, encrypted) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }));
-    a.download = `kurashi-shushi-${localDate()}${encrypted ? ".encrypted" : ""}.backup.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    app.state.settings.lastBackupAt = nowIso();
-    app.commit();
-  },
+  // バックアップの中身（PIN のハッシュはこの端末の設定なので含めない）
   exportable() { return { ...app.state, settings: { ...app.state.settings, lock: null } }; },
   // 読み込んだデータで置き換える。ロックの設定はこの端末のものを残す
   importData(raw) {
@@ -79,6 +72,11 @@ function render() {
   document.querySelector("#monthLabel").textContent = monthLabel(app.ctx.month);
   main.innerHTML = v.render(app);
   v.after?.(app);
+  // 週1回: アプリを開いたとき（ロック解除後）にバックアップをたずねる（1回の起動で1度だけ）
+  if (!app.ctx.backupAsked && app.ctx.view === "home" && backupStatusOf(app).prompt && !document.querySelector("#sheet").open) {
+    app.ctx.backupAsked = true;
+    setTimeout(() => { if (!app.locked && !document.querySelector("#sheet").open) openSheet(app, "quickBackup"); }, 400);
+  }
   document.querySelectorAll("nav [data-view]").forEach(b => b.setAttribute("aria-current", b.dataset.view === app.ctx.view ? "page" : "false"));
 }
 
@@ -115,6 +113,10 @@ const actions = {
   "open-month": d => { app.ctx.month = d.id; setRecordsView("daily"); },
   "records-view": d => { app.ctx.view = "records"; setRecordsView(d.id); window.scrollTo(0, 0); },
   export: () => openSheet(app, "exportBackup"),
+  backup: () => openSheet(app, "quickBackup"),
+  "backup-quick": () => quickBackup(app),
+  "backup-encrypted": () => { const text = pendingEncrypted(); if (text) deliverBackup(app, text, true); },
+  "backup-snooze": () => snoozeBackup(app),
   "pin-set": () => openSheet(app, "pinSet"),
   "pin-off": () => openSheet(app, "pinOff"),
   "lock-now": () => lockNow(app),
@@ -187,4 +189,5 @@ document.addEventListener("visibilitychange", () => {
 
 initSheet();
 initLock(app, render);
+requestPersistence(app);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");

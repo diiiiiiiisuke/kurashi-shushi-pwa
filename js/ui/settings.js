@@ -1,6 +1,7 @@
 // 設定: バックアップ・支払方法・カテゴリ・予算・定期取引
 import { fmt, daysBetween, localDate, monthOf } from "../util.js";
 import { accountUsage } from "../calc/accounts.js";
+import { status as backupState, ageText } from "./backup.js";
 import { h, panel, emptyNote, categoryName, accountName, ACCOUNT_KIND_LABEL } from "./common.js";
 
 const addBtn = (action, label) => `<button type="button" class="link" data-action="${action}">＋ ${label}</button>`;
@@ -26,10 +27,22 @@ export function renderSettings(app) {
     </div>
     <p class="muted small">記録はこの端末の中だけに保存され、外部には送信されません（ブラウザの設定で外部との通信を禁止しています）。</p>`, { eyebrow: "SECURITY" }));
 
+  const bs = backupState(app);
+  const persisted = app.storagePersisted === true ? "✅ 有効（iPhoneがデータを消しにくくなっています）" : app.storagePersisted === false ? "iPhoneの判断に任せています" : "この端末では未対応";
   out.push(panel("バックアップ", `
-    <p class="muted">記録はこのスマホの中だけに保存されています。故障・機種変更に備えて、月に1回は書き出してください。<strong>パスワードで暗号化して書き出せます。</strong>書き出したファイルはGitHubや人に送るチャットに置かないでください。</p>
-    <p>最後のバックアップ: <strong>${last ? `${last.slice(0, 10)}（${daysBetween(last.slice(0, 10), localDate())}日前）` : "まだありません"}</strong></p>
-    <div class="button-row"><button type="button" class="primary" data-action="export">書き出す</button><button type="button" class="secondary" data-action="import">読み込む</button></div>`, { eyebrow: "BACKUP" }));
+    <p class="muted">📱 記録はこのiPhoneの中だけにあります。故障・紛失・機種変更に備えて、<strong>週に1回</strong>iCloudにコピーしておきましょう（7日たつとアプリが知らせます）。</p>
+    <p>最後のバックアップ: <strong class="${bs.due ? "expense" : "income"}">${ageText(bs)}</strong></p>
+    <button type="button" class="primary wide" data-action="backup-quick">☁️ iCloudに保存（1タップ）</button>
+    <div class="button-row"><button type="button" class="secondary" data-action="export">🔒 パスワードを付けて保存</button><button type="button" class="secondary" data-action="import">読み込む（元に戻す）</button></div>
+    <details class="howto"><summary>保存のしかた・元に戻し方</summary>
+      <ol>
+        <li>「iCloudに保存」を押す → <strong>「"ファイル"に保存」</strong>を選ぶ</li>
+        <li><strong>iCloud Drive</strong> の中のフォルダ（例: 家計簿バックアップ）を選んで「保存」</li>
+        <li>元に戻すとき: このアプリの「読み込む」→ iCloud Drive の一番新しいファイルを選ぶ</li>
+      </ol>
+      <p class="muted small">ファイルは Apple ID で守られた iCloud に保存されます。さらに守りたいときは「パスワードを付けて保存」を使ってください。GitHub や人に送るチャットには置かないでください。</p>
+    </details>
+    <p class="muted small">データ保護（消えにくくする設定）: ${persisted}</p>`, { eyebrow: "BACKUP" }));
 
   out.push(panel("支払方法（クレカ・口座）", accountsBody(s), { eyebrow: "ACCOUNTS", action: addBtn("add-account", "追加") }));
 

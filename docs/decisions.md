@@ -72,3 +72,7 @@
 ## 2026-10-12 Cloudflare は Pages ではなく Workers（静的アセット）で公開する
 - 理由: Cloudflare の作成画面が Workers を標準にしており、オーナーが Workers で作成した。作り直すより設定ファイルを足す方が早い。機能（専用ドメイン・自動公開・プレビュー・`_headers`）は Pages と同等
 - 影響: `wrangler.jsonc` を追加（サーバー側のコードなし、`dist/` を配るだけ）。`security-check.mjs` で `main` や外部サービス接続の追加を禁止。URL は `kurashi-shushi-pwa.<サブドメイン>.workers.dev`
+
+## 2026-10-12 バックアップは「週1回の催促＋1タップで iCloud に保存」、パスワードは任意
+- 理由: オーナーが毎回のバックアップを面倒と感じたため。ホーム画面の Web アプリは iCloud へ自動保存できないので、手間を最小（約5秒）にする。完全自動（サーバーへの同期）は「データを外部に出さない」方針と相反するため見送り
+- 影響: 初期はパスワードなし（保存先の iCloud が Apple ID で守られているため）。パスワード付きも選べる。`navigator.storage.persist()` で保存領域を消えにくくする。詳細は `docs/spec-backup.md`
