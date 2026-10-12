@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-10-12 Claude Code — main へマージしてスマホで使えるように
+
+- プルリクエスト diiiiiiiisuke/kurashi-shushi-pwa#1 を作成し、CI（check）成功を確認して `main` にマージ
+- GitHub Pages（`main` のルートを配信）が自動でデプロイ → https://diiiiiiiisuke.github.io/kurashi-shushi-pwa/
+- 以後の作業は `main` から新しいブランチを切って、プルリクエスト経由で `main` に入れる
+
 ## 2026-10-12 Claude Code — v2 実装（spec-v2.md フェーズ0〜6）
 
 **オーナーの回答**: 要確認事項はすべて仮の決定でOK。実装まで行う
