@@ -5,6 +5,7 @@ import { simulateAll, regularPayment } from "../calc/simulation.js";
 import { toSimItem, firstPaymentMonth, monthlyInterest } from "../calc/debt.js";
 import { h, panel, metric, bar, emptyNote, categoryName, txRow } from "./common.js";
 import { renderOverview } from "./overview.js";
+import { backupBanner } from "./backup.js";
 
 // 次の支払予定（返済と、まだ記録されていない定期の支出）
 export function upcoming(state, today, limit = 3) {
@@ -42,11 +43,7 @@ export function renderHome(app) {
       <li>カード・ローンの返済は「返済」タブで登録すると、完済の見通しが出る</li></ol>`, { eyebrow: "WELCOME" }));
   }
 
-  const last = state.settings.lastBackupAt;
-  const backupAge = last ? daysBetween(last.slice(0, 10), today) : null;
-  if (state.transactions.length >= 10 && (backupAge === null || backupAge > 30)) {
-    out.push(`<div class="notice" role="status">${backupAge === null ? "まだバックアップがありません。" : `最後のバックアップから${backupAge}日たっています。`}スマホの故障・機種変更に備えて <button type="button" class="link" data-action="export">今すぐ書き出す</button></div>`);
-  }
+  out.push(backupBanner(app));
 
   out.push(`<div class="metrics">
     ${metric(isThisMonth ? "今月の収入" : `${monthLabel(ym)}の収入`, fmt(t.income), "income")}

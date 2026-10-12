@@ -4,6 +4,7 @@ import { newCategory, CASH_ACCOUNT_ID } from "../store.js";
 import { categoryRank } from "../calc/summary.js";
 import { parseAccountNames, accountUsage } from "../calc/accounts.js";
 import { createPinLock, verifyPin, isValidPin, encryptBackup, decryptBackup } from "../crypto.js";
+import { status as backupState, ageText } from "./backup.js";
 import { splitPayment, currentBalance } from "../calc/debt.js";
 import { h, field, options, METHOD_LABEL, KIND_LABEL, ACCOUNT_KIND_LABEL } from "./common.js";
 
@@ -374,30 +375,48 @@ const pinOffKind = {
 
 const passInput = (name, label) => field(label, `<input name="${name}" type="password" autocomplete="new-password" minlength="8">`);
 
+// 1タップバックアップ（週1回の催促でも開く）。ボタンは main.js の data-action で処理する
+const quickBackupKind = {
+  title: () => "☁️ バックアップ",
+  html(app) {
+    const st = backupState(app);
+    return `
+      <p>最後のバックアップ: <strong>${ageText(st)}</strong></p>
+      <p class="hint">下のボタンを押すと保存先を選ぶ画面が出ます。<strong>「"ファイル"に保存」→「iCloud Drive」</strong>を選んで「保存」を押せば完了です。iPhoneが壊れても、このファイルから元に戻せます。</p>
+      <button type="button" class="primary wide" data-action="backup-quick">☁️ iCloudに保存</button>
+      <p class="center"><button type="button" class="link" data-action="export">🔒 パスワードを付けて保存したい場合</button></p>
+      <div class="sheet-actions"><button type="button" class="link" data-action="backup-snooze">あとで（明日また確認）</button><span class="spacer"></span><button type="button" class="secondary" data-close>閉じる</button></div>`;
+  },
+  submit() { return "keep-open"; },
+};
+
+
+// パスワード付き: 暗号化に時間がかかるため、①暗号化 → ②「保存する」ボタンで共有シート、の2段階
 const exportBackupKind = {
-  title: () => "バックアップを書き出す",
+  title: () => "🔒 パスワードを付けて保存",
   html: () => `
-    <p class="hint"><strong>パスワードで暗号化して書き出す</strong>のがおすすめです。iCloud などに保存しても、パスワードを知らない人は中身を読めません。パスワードを忘れると読み込めなくなるので、パスワード管理アプリなどに保存してください。</p>
+    <p class="hint">パスワードを付けると、ファイルを見られても中身は読めません。<strong>パスワードを忘れると元に戻せなくなる</strong>ので、iPhoneの「パスワード」アプリなどに保存してください。</p>
     ${passInput("password", "パスワード（8文字以上）")}
     ${passInput("confirm", "パスワード（もう一度）")}
-    ${yesNo("plain", false, "暗号化しないで書き出す（おすすめしません）")}
     ${buttons()}`,
-  onInput() {
-    const f = form(), plain = f.elements.plain.checked;
-    for (const n of ["password", "confirm"]) { f.elements[n].disabled = plain; f.elements[n].closest(".field").classList.toggle("dim", plain); }
-  },
   async submit(app, o, d) {
-    if (d.plain === "on") {
-      app.download(app.exportable(), false);
-      app.toast("書き出しました（暗号化なし）");
-      return;
-    }
     if ((d.password || "").length < 8) return "パスワードは8文字以上にしてください";
     if (d.password !== d.confirm) return "確認用のパスワードが一致しません";
-    app.download(await encryptBackup(app.exportable(), d.password), true);
-    app.toast("暗号化して書き出しました");
+    const text = JSON.stringify(await encryptBackup(app.exportable(), d.password), null, 2);
+    openSheet(app, "encryptedReady", { text });
+    return "keep-open";
   },
 };
+
+const encryptedReadyKind = {
+  title: () => "🔒 保存の準備ができました",
+  html: () => `<p class="hint">ボタンを押して、<strong>「"ファイル"に保存」→「iCloud Drive」</strong>を選んでください。</p>
+    <button type="button" class="primary wide" data-action="backup-encrypted">☁️ iCloudに保存</button>
+    <div class="sheet-actions"><span class="spacer"></span><button type="button" class="secondary" data-close>閉じる</button></div>`,
+  submit() { return "keep-open"; },
+};
+
+export const pendingEncrypted = () => (current?.k === encryptedReadyKind ? current.opts.text : null);
 
 const decryptBackupKind = {
   title: () => "暗号化されたバックアップを読み込む",
@@ -409,7 +428,7 @@ const decryptBackupKind = {
   },
 };
 
-const KINDS = { pinSet: pinSetKind, pinOff: pinOffKind, exportBackup: exportBackupKind, decryptBackup: decryptBackupKind, tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
+const KINDS = { pinSet: pinSetKind, pinOff: pinOffKind, quickBackup: quickBackupKind, exportBackup: exportBackupKind, encryptedReady: encryptedReadyKind, decryptBackup: decryptBackupKind, tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
 
 let current = null;
 

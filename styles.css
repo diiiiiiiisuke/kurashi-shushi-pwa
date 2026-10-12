@@ -262,3 +262,14 @@ body.locked main, body.locked nav, body.locked .fab, body.locked .topbar { visib
 .lock-forgot { text-align: left; font-size: 13px; color: var(--muted); }
 .lock-forgot summary { cursor: pointer; padding: 6px 0; }
 .field.dim { opacity: .4; }
+
+/* ───────── 1タップバックアップ（docs/spec-backup.md） ───────── */
+.backup-banner { background: #eef6ff; border: 1px solid #b9d7f5; border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+.backup-banner strong { display: block; color: var(--navy); }
+.backup-banner small { display: block; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.backup-banner .button-row { margin-top: 10px; }
+.primary.wide { width: 100%; font-size: 16px; padding: 14px; margin: 8px 0; }
+.center { text-align: center; }
+.howto { margin-top: 12px; font-size: 14px; }
+.howto summary { cursor: pointer; color: var(--teal); font-weight: 700; padding: 6px 0; }
+.howto ol { padding-left: 20px; line-height: 1.8; margin: 6px 0; }

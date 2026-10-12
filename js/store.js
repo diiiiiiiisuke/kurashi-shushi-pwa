@@ -34,7 +34,7 @@ export function defaultState() {
     budgets: DEFAULT_BUDGETS.map(([n, amount]) => ({ categoryId: byName(n).id, amount })),
     recurring: [],
     debts: [],
-    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily", overviewBars: "both", overviewRange: "1y", lock: null, lockAfter: 1 },
+    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily", overviewBars: "both", overviewRange: "1y", lock: null, lockAfter: 1, backupSnoozeUntil: null },
   };
 }
 
@@ -129,6 +129,8 @@ function sanitize(s) {
   const lock = s.settings.lock;
   s.settings.lock = lock && typeof lock.salt === "string" && typeof lock.hash === "string" ? { salt: lock.salt, hash: lock.hash, iterations: int(lock.iterations) || 200000 } : null;
   if (![0, 1, 5].includes(s.settings.lockAfter)) s.settings.lockAfter = 1;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s.settings.backupSnoozeUntil))) s.settings.backupSnoozeUntil = null;
+  if (s.settings.lastBackupAt != null && Number.isNaN(Date.parse(s.settings.lastBackupAt))) s.settings.lastBackupAt = null;
 }
 
 // 定期取引: 前回作成した月の翌月から、今日までに日付が来た月の分を作る。作成した件数を返す
