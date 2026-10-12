@@ -69,7 +69,7 @@ index.html ──> js/main.js
 
 ## 公開（[deploy.md](deploy.md)）
 
-- Cloudflare Pages。ビルドコマンド `bash scripts/build-site.sh`、出力 `dist/`（`sw.js` の ASSETS と `_headers` だけ）
+- Cloudflare Workers（静的アセットのみ、`wrangler.jsonc`）。ビルドコマンド `bash scripts/build-site.sh`、出力 `dist/`（`sw.js` の ASSETS と `_headers` だけ）
 - `_headers` で CSP（index.html の meta と同じ＋`frame-ancestors 'none'`）などのヘッダーを返す
 
 ## バックアップ（[spec-backup.md](spec-backup.md)）

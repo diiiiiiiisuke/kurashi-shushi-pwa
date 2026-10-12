@@ -7,7 +7,7 @@
 | 場所 | 家計データがあるか |
 | --- | --- |
 | GitHub（このリポジトリ・公開） | **ない**。コードとドキュメントだけ |
-| Cloudflare Pages（アプリの配信） | **ない**。アプリのファイルを配るだけで、入力内容は受け取らない |
+| Cloudflare Workers（アプリの配信） | **ない**。アプリのファイルを配るだけで、入力内容は受け取らない |
 | スマホのアプリ（ブラウザの保存領域） | **ある**。入力したデータはここだけに保存される |
 | 書き出したバックアップ | **ある**。パスワードで暗号化して書き出せる（推奨） |
 
@@ -22,7 +22,7 @@
 | スマホを他の人に触られて家計を見られる | アプリの **PINロック**（自動ロック: すぐ／1分／5分）。ロック中は記録を画面に出さない | オーナーが設定 |
 | バックアップファイルを他人に見られる | **パスワードで暗号化して書き出す**（AES-GCM 256bit、PBKDF2-SHA256 60万回） | オーナー |
 | 細工したバックアップを読み込んでしまう | 読み込み時に型を整形し、表示はすべて `escapeHtml()` を通す | 自動 |
-| 同じドメインの別サイトからデータを読まれる | アプリを専用ドメイン（Cloudflare Pages の `*.pages.dev`）に移し、github.io には家計データを残さない（`docs/deploy.md`） | オーナー（移行） |
+| 同じドメインの別サイトからデータを読まれる | アプリを専用ドメイン（Cloudflare の `*.workers.dev`）に移した（2026-10-12）。github.io には家計データを残さない（`docs/deploy.md` 手順4） | オーナー（github.io の片付け） |
 | 他のサイトにアプリを埋め込まれる・情報を読まれる | `_headers` で埋め込み禁止（frame-ancestors / X-Frame-Options）、nosniff、他サイトからの読み取り許可（CORS）なし | 自動 |
 
 ## 3. アプリ側の対策（実装済み）
@@ -65,8 +65,8 @@ Claude/Codex の権限ではリポジトリの設定画面を変更できない�
 - **Private vulnerability reporting** を Enable（SECURITY.md の報告窓口）
 - Dependabot alerts を Enable（npm パッケージは使っていないが、念のため）
 
-### 4.4 公開先（Cloudflare Pages）
-`docs/deploy.md` の手順で移行する。Cloudflare のアカウントにも2段階認証を設定し、Cloudflare の GitHub アプリは **このリポジトリだけ** に限定する。移行後は GitHub Pages を停止する（Settings → Pages → Branch: None）
+### 4.4 公開先（Cloudflare Workers。移行済み）
+`docs/deploy.md` の手順で移行した。Cloudflare のアカウントにも2段階認証を設定し、Cloudflare の GitHub アプリは **このリポジトリだけ** に限定する。移行後は GitHub Pages を停止する（Settings → Pages → Branch: None）
 
 ### 4.5 AI に渡す権限を絞る
 - GitHub → 右上アイコン → **Settings → Applications → Installed GitHub Apps** で、ChatGPT（Codex）・Claude の **Repository access** を **Only select repositories → kurashi-shushi-pwa** にする
@@ -79,7 +79,7 @@ Claude/Codex の権限ではリポジトリの設定画面を変更できない�
 3. **バックアップは週1回（アプリが催促する）、iCloud Drive に保存**。iCloud は Apple ID（2段階認証）で守られている。さらに守りたいときは「パスワードを付けて保存」を使い、パスワードはパスワード管理アプリに保存
 4. **AI の変更は、PR のセキュリティ確認欄と CI の緑を見てからマージ**。「外部」「通信」「CSP」「workflows」が出てくる変更は特に慎重に
 5. **公開の場（Issue・PR・AIへの相談）に実際の金額・カード番号・口座・スクリーンショットを載せない**。相談はダミーの数値で
-6. **移行が終わるまでは `diiiiiiiisuke.github.io` で別サイトを公開しない**（移行後は自由に公開してよい）
+6. **github.io の片付け（`docs/deploy.md` 手順4）が終わるまでは `diiiiiiiisuke.github.io` で別サイトを公開しない**（片付け後は自由に公開してよい）
 7. 共用PCでは使わない
 
 ## 6. GitHub 2段階認証の設定手順（済み）

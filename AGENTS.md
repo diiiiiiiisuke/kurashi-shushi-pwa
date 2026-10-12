@@ -9,7 +9,7 @@
 - 目的: オーナーが **毎日の家計簿** と **自分の収支状況（個人・事業・返済）** をスマホで管理する
 - 形式: 依存ライブラリなし・ビルドなしの静的PWA（HTML / CSS / 素のJavaScript の ES Modules）
 - データ保存: 端末の `localStorage`（キー `kurashi-shushi-data-v1`）。サーバーには一切送信しない
-- 公開: **Cloudflare Workers の静的アセット**（`main` にマージすると `wrangler.jsonc` に従い `scripts/build-site.sh` で `dist/` を作って自動公開。手順・URL は `docs/deploy.md`）。旧: GitHub Pages（移行後に停止）
+- 公開: **Cloudflare Workers の静的アセット**（`main` にマージすると `wrangler.jsonc` に従い `scripts/build-site.sh` で `dist/` を作って自動公開。手順・URL は `docs/deploy.md`）。2026-10-12 に移行済み。旧 GitHub Pages は使わない（停止する）
 - オーナーはスマホから GitHub で開発・管理する。日常の開発は **Codex**、Claude Code は一時的な利用
 
 ## ファイル構成
@@ -95,4 +95,4 @@ v2（`docs/spec-v2.md`）・v3（`docs/spec-v3.md`: Notion風DB・カード別�
 
 - ローカル: `python3 -m http.server 8000` を実行し、`http://localhost:8000` を開く
 - Service Worker はネットワーク優先なので、オンラインで再読み込みすれば新しい版になる
-- 本番: Cloudflare Pages（URL は `docs/deploy.md`）。`main` にマージすると反映される。プルリクエストごとにプレビュー用URLも作られる
+- 本番: Cloudflare Workers `https://kurashi-shushi-pwa.<サブドメイン>.workers.dev`（`docs/deploy.md`）。`main` にマージすると反映される。プルリクエストごとにプレビュー用URLも作られる

@@ -29,13 +29,14 @@
 - [x] **v4（spec-v4.md）**: 支払方法のまとめて追加（Notion から貼り付け）・削除/非表示・並べ替え・今月の利用額、収支（棒）と残債（折れ線）を1つにしたグラフ（ホーム・分析）（2026-10-12）
 - [x] **セキュリティ強化**: PINロック（自動ロック）・暗号化バックアップ・データを消す、`scripts/security-check.mjs`（CIで外部通信・CSP・ワークフロー権限を検査）、PRテンプレート、ワークフローの最小権限・SHA固定、SECURITY.md（2026-10-12）
 - [x] Cloudflare Pages 用の準備: `scripts/build-site.sh`（公開ファイルだけ）、`_headers`（セキュリティヘッダー）、チェックとテスト、`docs/deploy.md`（2026-10-12）
+- [x] **Cloudflare Workers へ移行**（`*.workers.dev` で本番稼働、README・AGENTS.md・docs を更新）（2026-10-12）
 - [x] **1タップバックアップ**（spec-backup.md）: 7日ごとの催促、共有シートで iCloud Drive に保存、パスワードは任意、`storage.persist()`（2026-10-12）
 - [ ] （任意）完全自動のバックアップ（暗号化してサーバーに同期）— 方針変更が必要なため保留
 - [x] 予算・返済先・カードの編集、予算の削除、定期取引、記録の検索・絞り込み、返済と残高の連動、12か月推移、最終バックアップ日の表示（v2 に含めて完了）
 
 ## 次にやる（優先度順）
 
-- [ ] **Cloudflare Pages へ移行**（オーナー。`docs/deploy.md` の手順 1〜5）→ 新しい URL を README・AGENTS.md・docs に反映
+- [ ] github.io の片付け（オーナー。`docs/deploy.md` 手順4: 古いデータの削除・GitHub Pages を None に）
 - [ ] GitHub の設定（main の保護ルール・Actions の権限・Secret scanning・AI アプリのリポジトリ制限）を `docs/security.md` 4章の手順で行う（オーナー）
 - [ ] アプリで PIN ロックをオンにする（オーナー）
 - [ ] デモ用ファイルで操作感を確認 → 開始用ファイル（保有クレカ18枚入り）を読み込んで本番開始（オーナー。ファイルはチャットで受け渡し済み、リポジトリには置かない）
