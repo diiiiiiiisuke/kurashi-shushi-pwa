@@ -42,6 +42,8 @@
 
 ## 候補（未定）
 
+- [ ] バックアップを共有シートから iCloud Drive に直接保存（Web Share API）、催促を7日ごとに、`navigator.storage.persist()` で保存領域を消えにくくする
+
 - [ ] 端末内データの暗号化（PIN から鍵を作る）
 - [ ] Face ID でのロック解除（WebAuthn）
 - [ ] ダークモード

@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-10-12 Claude Code — データ消失への備えと改修の流れを記録
+
+- オーナー: iPhone のホーム画面に追加でき、使い始められた。ブラウザ保存なのでデータが消える心配がある／今後 Codex でどう改修していくか知りたい
+- `docs/mobile-workflow.md` に「データを失わないために」（消える場面と対策、週1回の暗号化バックアップを iCloud Drive へ）と「改修のしかた（Codex）」（依頼→PR→プレビューURLで試す→マージ→Revert で戻せる）を追記
+- roadmap に「共有シートから iCloud に保存・催促7日ごと・storage.persist()」を追加
+
 ## 2026-10-12 Claude Code — Cloudflare のビルド失敗を修正（Workers 対応）
 
 - オーナーが Cloudflare で作成したのが Pages ではなく **Workers**（現在の標準）だったため、設定ファイルがなくビルドが失敗していた
