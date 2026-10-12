@@ -7,11 +7,13 @@ import { renderAnalysis, afterAnalysis } from "./ui/analysis.js";
 import { renderDebts, renderSimResult, afterSim } from "./ui/debts.js";
 import { renderSettings } from "./ui/settings.js";
 import { openSheet, initSheet } from "./ui/forms.js";
+import { moveAccount } from "./calc/accounts.js";
+import { afterOverview } from "./ui/overview.js";
 
 const VIEWS = {
-  home: { render: renderHome, month: true },
+  home: { render: renderHome, month: true, after: afterOverview },
   records: { render: renderRecords, month: true },
-  analysis: { render: renderAnalysis, month: true, after: afterAnalysis },
+  analysis: { render: renderAnalysis, month: true, after: a => { afterAnalysis(a); afterOverview(a); } },
   debts: { render: renderDebts, after: afterSim },
   settings: { render: renderSettings },
 };
@@ -62,6 +64,8 @@ const actions = {
   "add-category": () => openSheet(app, "category"),
   "edit-category": d => openSheet(app, "category", { category: find(app.state.categories, d.id) }),
   "add-account": () => openSheet(app, "account"),
+  "bulk-accounts": () => openSheet(app, "bulkAccount"),
+  "move-account": d => { app.state.accounts = moveAccount(app.state.accounts, d.id, Number(d.dir)); app.commit(); },
   "edit-account": d => openSheet(app, "account", { account: find(app.state.accounts, d.id) }),
   "add-budget": () => openSheet(app, "budget"),
   "edit-budget": d => openSheet(app, "budget", { budget: app.state.budgets.find(b => b.categoryId === d.id) }),
@@ -104,6 +108,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   if (e.target.dataset.sim) save(app.state);
   if (e.target.matches("[data-records-view]")) setRecordsView(e.target.value);
+  if (e.target.dataset.overview) { app.state.settings[e.target.dataset.overview] = e.target.value; app.commit(); }
   if (e.target.matches("[data-sort]")) { app.ctx.sort = e.target.value; document.querySelector("#recordList").innerHTML = renderRecordList(app); }
 });
 // 表の行（tr）もキーボードの Enter で開けるようにする

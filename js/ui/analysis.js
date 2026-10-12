@@ -4,6 +4,7 @@ import { trend, inMonth, byCategory, fixedVariable, scopeTotals } from "../calc/
 import { drawTrend } from "./chart.js";
 import { h, panel, metric, emptyNote, categoryName } from "./common.js";
 import { accountBreakdown } from "./breakdown.js";
+import { renderOverview } from "./overview.js";
 
 export function renderAnalysis(app) {
   const { state, ctx } = app;
@@ -11,7 +12,7 @@ export function renderAnalysis(app) {
   const rows = trend(state.transactions, ym, 12);
   const active = rows.filter(r => r.income || r.expense);
   const avg = k => (active.length ? sumBy(active, r => r[k]) / active.length : 0);
-  const out = [];
+  const out = [renderOverview(app)];
 
   out.push(panel("12か月の推移", `<canvas id="trendChart" aria-label="12か月の収入・支出・収支のグラフ"></canvas>
     <div class="legend"><span class="key income">収入</span><span class="key expense">支出</span><span class="key balance">収支</span></div>

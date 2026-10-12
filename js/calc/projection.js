@@ -90,3 +90,47 @@ export function speedTable(items, start, budget, strategy = "avalanche", steps =
   });
   return { minTotal, rows };
 }
+
+/**
+ * 収支と返済を1つのグラフに（docs/spec-v4.md 3章）
+ * range: "1y"（前後6か月）| "2y"（前後12か月）| "payoff"（過去12か月〜完済）
+ * 戻り値: { months[], nowIndex, rows: [{ month, income, expense, balance, debt, future }] }
+ *   debt: 月末の残債（今月は今の残高、未来は予測）。future: 今月より後か
+ */
+export function buildOverview(state, today, range = "1y") {
+  const thisMonth = monthOf(today);
+  const debts = state.debts.filter(d => !d.archived);
+  const past = range === "1y" ? 6 : 12;
+  const proj = buildProjection(debts, state.transactions, today, state.settings.repaymentBudget, state.settings.strategy);
+  const sel = proj.scenarios.find(s => s.isSelected) || proj.scenarios[0];
+  const payoff = sel?.result.payable ? sel.result.payoffMonth : null;
+  let futureN = range === "1y" ? 6 : 12;
+  if (range === "payoff") futureN = payoff ? Math.max(1, monthsBetween(thisMonth, payoff)) : MAX_FUTURE;
+  futureN = Math.min(futureN, MAX_FUTURE);
+
+  const predicted = new Map((sel?.result.timeline || []).map(t => [t.month, t.balance]));
+  // 実績の残債は、基準日・最初の返済記録の月より前は分からないので描かない
+  const ids = new Set(debts.map(d => d.id));
+  const firstData = [...state.transactions.filter(t => ids.has(t.debtId)).map(t => monthOf(t.date)), ...debts.map(d => monthOf(d.baseDate))].sort()[0];
+  const nowBalance = proj.nowBalance;
+  const rows = [];
+  for (let i = -past + 1; i <= futureN; i++) {
+    const month = addMonths(thisMonth, i);
+    const txs = state.transactions.filter(t => monthOf(t.date) === month);
+    const income = txs.filter(t => t.type === "income").reduce((n, t) => n + t.amount, 0);
+    const expense = txs.filter(t => t.type === "expense").reduce((n, t) => n + t.amount, 0);
+    let debt;
+    if (month < thisMonth) debt = firstData && month >= firstData ? debts.reduce((n, d) => n + balanceAt(d, state.transactions, monthEnd(month)), 0) : null;
+    else if (month === thisMonth) debt = predicted.has(month) ? predicted.get(month) : nowBalance;
+    else debt = predicted.has(month) ? predicted.get(month) : (payoff && month > payoff ? 0 : null);
+    rows.push({ month, income, expense, balance: income - expense, debt, future: month > thisMonth });
+  }
+  // 返済先がない月は線を描かない
+  if (!debts.length) rows.forEach(r => (r.debt = null));
+  return { rows, nowIndex: past - 1, nowBalance, payoff, monthlyPayment: sel?.result.timeline[0]?.paid || 0 };
+}
+
+function monthsBetween(a, b) {
+  const [ay, am] = a.split("-").map(Number), [by, bm] = b.split("-").map(Number);
+  return (by - ay) * 12 + (bm - am);
+}

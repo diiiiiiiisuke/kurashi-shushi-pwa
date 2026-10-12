@@ -2,6 +2,7 @@
 import { id, nowIso, localDate, monthOf, addMonths, fmt } from "../util.js";
 import { newCategory, CASH_ACCOUNT_ID } from "../store.js";
 import { categoryRank } from "../calc/summary.js";
+import { parseAccountNames, accountUsage } from "../calc/accounts.js";
 import { splitPayment, currentBalance } from "../calc/debt.js";
 import { h, field, options, METHOD_LABEL, KIND_LABEL, ACCOUNT_KIND_LABEL } from "./common.js";
 
@@ -159,14 +160,51 @@ const accountKind = {
         ${field("締日（カード）", `<input name="closingDay" type="number" min="1" max="31" inputmode="numeric" value="${a.closingDay ?? ""}">`)}
         ${field("支払日（カード）", `<input name="paymentDay" type="number" min="1" max="31" inputmode="numeric" value="${a.paymentDay ?? ""}">`)}
       </div>
-      ${buttons(o.account && o.account.id !== CASH_ACCOUNT_ID ? deleteButton(o.account.archived ? "使用を再開" : "使わない（非表示）") : "")}`;
+      ${o.account && o.account.id !== CASH_ACCOUNT_ID && accountUsage(app.state, o.account.id).used ? `<p class="hint">この支払方法は記録で使われているため削除できません。「使わない」にすると、過去の記録は残したまま入力の選択肢から消えます。</p>` : ""}
+      ${buttons(o.account && o.account.id !== CASH_ACCOUNT_ID ? deleteButton(accountUsage(app.state, o.account.id).used ? (o.account.archived ? "使用を再開" : "使わない（非表示）") : "削除") : "")}`;
   },
   submit(app, o, d) {
     const values = { name: d.name.trim(), kind: d.kind, closingDay: optNum(d.closingDay), paymentDay: optNum(d.paymentDay) };
     if (o.account) Object.assign(o.account, values);
     else app.state.accounts.push({ id: id(), archived: false, ...values });
   },
-  remove(app, o) { o.account.archived = !o.account.archived; },
+  // 使われていなければ削除、使われていれば非表示（記録を壊さない）
+  remove(app, o) {
+    const s = app.state, a = o.account;
+    if (accountUsage(s, a.id).used) { a.archived = !a.archived; app.toast(a.archived ? `「${a.name}」を非表示にしました` : `「${a.name}」の使用を再開しました`); return; }
+    if (!confirm(`「${a.name}」を削除しますか？`)) return "cancel";
+    s.accounts = s.accounts.filter(x => x !== a);
+    if (s.settings.lastAccountId === a.id) s.settings.lastAccountId = CASH_ACCOUNT_ID;
+    app.toast(`「${a.name}」を削除しました`);
+  },
+};
+
+// ───────── 支払方法をまとめて追加（Notion の「名前」列を貼り付け） ─────────
+
+const bulkAccountKind = {
+  title: () => "支払方法をまとめて追加",
+  html() {
+    const kinds = Object.entries(ACCOUNT_KIND_LABEL).map(([value, name]) => ({ value, name }));
+    return `
+      <p class="hint">Notion の「名前」列を選んでコピーし、下に貼り付けてください。1行に1件。表ごとコピーした場合は、各行の最初の列を名前として使います。見出しの「名前」や重複・登録済みのものは追加しません。</p>
+      ${field("名前（1行に1件）", `<textarea name="names" rows="7" placeholder="例:\nAカード\nBカード\nCカード" autocomplete="off"></textarea>`)}
+      ${field("種類", `<select name="kind">${options(kinds, "card", "value")}</select>`)}
+      <div class="bulk-preview" data-bulk-preview aria-live="polite"></div>
+      ${buttons()}`;
+  },
+  onInput(app) {
+    const f = form();
+    const r = parseAccountNames(f.elements.names.value, app.state.accounts.map(a => a.name));
+    f.querySelector("[data-bulk-preview]").innerHTML = !r.add.length && !r.existing.length ? "" :
+      `<p><strong>追加する ${r.add.length}件</strong>${r.existing.length ? `（登録済みのため追加しない: ${r.existing.map(h).join("、")}）` : ""}</p>
+       <div class="bulk-tags">${r.add.map(n => `<span class="tag tag-gray">💳 ${h(n)}</span>`).join("")}</div>`;
+  },
+  submit(app, o, d) {
+    const r = parseAccountNames(d.names, app.state.accounts.map(a => a.name));
+    if (!r.add.length) return r.existing.length ? "すべて登録済みです" : "名前を貼り付けてください";
+    for (const name of r.add) app.state.accounts.push({ id: id(), name, kind: d.kind, closingDay: null, paymentDay: null, archived: false });
+    app.toast(`${r.add.length}件を追加しました`);
+  },
 };
 
 // ───────── 予算 ─────────
@@ -298,7 +336,7 @@ const rebaseKind = {
   submit(app, o, d) { o.debt.baseBalance = num(d.baseBalance); o.debt.baseDate = d.baseDate; },
 };
 
-const KINDS = { tx: txKind, category: categoryKind, account: accountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
+const KINDS = { tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
 
 let current = null;
 
