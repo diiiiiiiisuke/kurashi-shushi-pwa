@@ -1,4 +1,40 @@
 // 支払方法（カード等）の計算（純粋関数）。仕様: docs/spec-v4.md 2章
+import { monthOf, addMonths, dateInMonth } from "../util.js";
+
+// カードごとの次回引き落とし。締日の翌月払い・一括払いの見積もり。
+// 定期取引の予測は保存せず、作成済みの記録と二重に数えない。
+export function nextCardPayments(state, today) {
+  const repaymentIds = new Set(state.categories.filter(c => c.isRepayment).map(c => c.id));
+  const isPurchase = t => t.type === "expense" && !t.debtId && !repaymentIds.has(t.categoryId);
+  const validDay = d => Number.isInteger(d) && d >= 1 && d <= 31;
+  const rows = [], unconfigured = [];
+  for (const a of state.accounts.filter(a => a.kind === "card")) {
+    if (!validDay(a.closingDay) || !validDay(a.paymentDay)) {
+      if (!a.archived) unconfigured.push(a);
+      continue;
+    }
+    let paymentMonth = monthOf(today);
+    if (dateInMonth(paymentMonth, a.paymentDay) < today) paymentMonth = addMonths(paymentMonth, 1);
+    const closingMonth = addMonths(paymentMonth, -1);
+    const from = dateInMonth(addMonths(closingMonth, -1), a.closingDay);
+    const through = dateInMonth(closingMonth, a.closingDay);
+    const recorded = state.transactions.filter(t => t.accountId === a.id && isPurchase(t) && t.date > from && t.date <= through);
+    let amount = recorded.reduce((n, t) => n + t.amount, 0), estimated = 0;
+    for (const r of state.recurring.filter(r => r.active && r.accountId === a.id && isPurchase(r))) {
+      for (const m of [addMonths(closingMonth, -1), closingMonth]) {
+        const date = dateInMonth(m, r.day);
+        if (date <= from || date > through || date <= today || (r.lastGeneratedMonth && m <= r.lastGeneratedMonth)) continue;
+        if (state.transactions.some(t => t.recurringId === r.id && monthOf(t.date) === m)) continue;
+        amount += r.amount;
+        estimated += r.amount;
+      }
+    }
+    // 非表示のカードも、次回請求に含まれる記録があれば残す。
+    if (!a.archived || amount > 0) rows.push({ accountId: a.id, name: a.name, date: dateInMonth(paymentMonth, a.paymentDay), amount, estimated, from, through });
+  }
+  rows.sort((a, b) => a.date.localeCompare(b.date) || b.amount - a.amount);
+  return { rows, total: rows.reduce((n, r) => n + r.amount, 0), unconfigured };
+}
 
 const HEADER_WORDS = new Set(["名前", "name", "カード名", "カード", "クレジットカード"]);
 

@@ -8,17 +8,17 @@ import { renderDebts, renderSimResult, afterSim } from "./ui/debts.js";
 import { renderSettings } from "./ui/settings.js";
 import { openSheet, initSheet } from "./ui/forms.js";
 import { moveAccount } from "./calc/accounts.js";
-import { afterOverview } from "./ui/overview.js";
+import { afterOverview, renderOverview } from "./ui/overview.js";
 import { initLock, lockNow } from "./ui/lock.js";
 import { isEncryptedBackup } from "./crypto.js";
 import { quickBackup, deliverBackup, snoozeBackup, requestPersistence, status as backupStatusOf } from "./ui/backup.js";
 import { pendingEncrypted } from "./ui/forms.js";
 
 const VIEWS = {
-  home: { render: renderHome, month: true, after: afterOverview },
+  home: { render: renderHome, month: true },
   records: { render: renderRecords, month: true },
-  analysis: { render: renderAnalysis, month: true, after: a => { afterAnalysis(a); afterOverview(a); } },
-  debts: { render: renderDebts, after: afterSim },
+  analysis: { render: renderAnalysis, month: true, after: afterAnalysis },
+  debts: { render: renderDebts, after: a => { afterSim(a); afterOverview(a); } },
   settings: { render: renderSettings },
 };
 
@@ -140,10 +140,12 @@ document.addEventListener("input", e => {
   if (sim === "repaymentBudget") {
     const v = Math.round(Number(String(e.target.value).replace(/[,\s]/g, "")) || 0);
     app.state.settings.repaymentBudget = v;
-    document.querySelectorAll('[data-sim="repaymentBudget"]').forEach(x => { if (x !== e.target) x.value = v; });
+    document.querySelectorAll('[data-sim="repaymentBudget"]').forEach(x => { if (x !== e.target) x.value = x.type === "range" ? v : v.toLocaleString("ja-JP"); });
   } else app.state.settings.strategy = e.target.value;
   document.querySelector("#simResult").innerHTML = renderSimResult(app);
   afterSim(app);
+  const overview = document.querySelector("#overviewPanel");
+  if (overview) { overview.outerHTML = renderOverview(app); afterOverview(app); }
 });
 document.addEventListener("change", e => {
   if (e.target.dataset.sim) save(app.state);

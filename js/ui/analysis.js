@@ -4,7 +4,6 @@ import { trend, inMonth, byCategory, fixedVariable, scopeTotals } from "../calc/
 import { drawTrend } from "./chart.js";
 import { h, panel, metric, emptyNote, categoryName } from "./common.js";
 import { accountBreakdown } from "./breakdown.js";
-import { renderOverview } from "./overview.js";
 
 export function renderAnalysis(app) {
   const { state, ctx } = app;
@@ -12,7 +11,7 @@ export function renderAnalysis(app) {
   const rows = trend(state.transactions, ym, 12);
   const active = rows.filter(r => r.income || r.expense);
   const avg = k => (active.length ? sumBy(active, r => r[k]) / active.length : 0);
-  const out = [renderOverview(app)];
+  const out = [];
 
   out.push(panel("12か月の推移", `<canvas id="trendChart" aria-label="12か月の収入・支出・収支のグラフ"></canvas>
     <div class="legend"><span class="key income">収入</span><span class="key expense">支出</span><span class="key balance">収支</span></div>
@@ -40,11 +39,10 @@ export function renderAnalysis(app) {
 
   const txs = inMonth(state.transactions, ym);
   const biz = scopeTotals(txs, "business"), per = scopeTotals(txs, "personal");
-  const interest = sumBy(txs, t => t.interest || 0);
   out.push(panel("個人と事業", `<div class="metrics">
     ${metric("個人の収入", fmt(per.income), "income")}${metric("個人の支出", fmt(per.expense), "expense")}
     ${metric("事業の売上", fmt(biz.income), "income")}${metric("事業の経費", fmt(biz.expense), "expense")}
-    ${metric("事業の利益（概算）", signed(biz.balance))}${metric("返済のうち利息", fmt(interest), "expense")}
+    ${metric("事業の利益（概算）", signed(biz.balance))}
   </div>`, { eyebrow: "SCOPE" }));
 
   return out.join("");

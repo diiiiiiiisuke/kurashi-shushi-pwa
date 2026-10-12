@@ -14,7 +14,7 @@ export function renderOverview(app) {
   const o = buildOverview(s, today, s.settings.overviewRange);
   const t = monthTotals(s.transactions, monthOf(today));
   const hasDebt = s.debts.some(d => !d.archived);
-  return panel("収支と返済", `
+  return `<div id="overviewPanel">${panel("収支と返済", `
     <div class="overview-controls">
       <select data-overview="overviewBars" aria-label="棒グラフの表示">${options(BARS, s.settings.overviewBars, "value")}</select>
       <select data-overview="overviewRange" aria-label="期間">${options(RANGES, s.settings.overviewRange, "value")}</select>
@@ -29,7 +29,7 @@ export function renderOverview(app) {
       ${metric("残りの残債", hasDebt ? fmt(o.nowBalance) : "—", "expense")}
       ${metric("完済予定", hasDebt ? (o.payoff ? monthLabel(o.payoff) : "完済できません") : "—")}
       ${metric("毎月の返済", hasDebt ? fmt(o.monthlyPayment) : "—")}
-    </div>`, { eyebrow: "CASHFLOW × DEBT" });
+    </div>`, { eyebrow: "CASHFLOW × DEBT" })}</div>`;
 }
 
 export function afterOverview(app) {

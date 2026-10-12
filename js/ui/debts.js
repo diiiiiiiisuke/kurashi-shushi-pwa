@@ -1,10 +1,13 @@
 // 返済: 返済先の管理とシミュレーション（docs/spec-v2.md 2.2）
-import { fmt, localDate, monthLabel, shortMonth, sumBy } from "../util.js";
-import { simulateAll, schedule } from "../calc/simulation.js";
-import { toSimItem, firstPaymentMonth, debtPayments } from "../calc/debt.js";
+import { fmt, localDate, monthOf, dateInMonth, addMonths, dayLabel, monthLabel, shortMonth, sumBy } from "../util.js";
+import { simulateAll, schedule, regularPayment } from "../calc/simulation.js";
+import { toSimItem, firstPaymentMonth, debtPayments, monthlyInterest } from "../calc/debt.js";
 import { buildProjection, speedTable } from "../calc/projection.js";
 import { drawProjection, drawSpeed, COLORS } from "./chart.js";
 import { h, panel, metric, bar, emptyNote, METHOD_LABEL, KIND_LABEL, txRow } from "./common.js";
+
+import { nextCardPayments } from "../calc/accounts.js";
+import { renderOverview } from "./overview.js";
 
 function model(state) {
   const today = localDate();
@@ -98,17 +101,49 @@ export function afterSim(app) {
   }
 }
 
+function cardPaymentsPanel(state) {
+  const result = nextCardPayments(state, localDate());
+  const max = Math.max(1, ...result.rows.map(r => r.amount));
+  const rows = result.rows.map(r => `<div class="card-payment-row">
+    <div class="row-between"><strong>${h(r.name)}</strong><strong class="expense">${fmt(r.amount)}</strong></div>
+    <small class="muted">${dayLabel(r.date)} 引き落とし${r.estimated ? ` · 定期支出の見込み ${fmt(r.estimated)} を含む` : ""}</small>
+    <div class="bar plain" role="img" aria-label="${h(r.name)}の引き落とし予定 ${fmt(r.amount)}"><span style="width:${r.amount / max * 100}%"></span></div>
+  </div>`).join("");
+  const missing = result.unconfigured.length ? `<p class="notice">締日・支払日が未設定のカードは合計に含めていません。</p><div class="button-row">${result.unconfigured.map(a => `<button type="button" class="link" data-action="edit-account" data-id="${h(a.id)}">${h(a.name)}を設定</button>`).join("")}</div>` : "";
+  return panel("次の支払い予定（カード別）", `
+    <div class="row-between big"><span>合計引き落とし額</span><strong class="expense">${fmt(result.total)}</strong></div>
+    <p class="muted small">各カードの次回1回分の合計です。締日の翌月払いで計算した概算です。未入力の利用額や休日の振替は含みません。</p>
+    ${rows || emptyNote("カードの締日・支払日を設定すると表示されます")}${missing}`, { eyebrow: "NEXT PAYMENT" });
+}
+
+function loanPaymentsPanel(state, m) {
+  const today = localDate(), ym = monthOf(today);
+  const rows = m.debts.filter(d => d.dueDay).map(d => {
+    const it = m.items.find(i => i.id === d.id);
+    const paid = state.transactions.some(t => t.debtId === d.id && monthOf(t.date) === ym);
+    let date = dateInMonth(ym, d.dueDay);
+    if (paid || date < today) date = dateInMonth(addMonths(ym, 1), d.dueDay);
+    return { name: d.name, date, amount: regularPayment(it, it.balance, monthlyInterest(it.balance, d), it.installmentsLeft), balance: it.balance };
+  }).filter(r => r.balance > 0).sort((a, b) => a.date.localeCompare(b.date));
+  if (!rows.length) return "";
+  return panel("ローン・分割・リボの次回返済", `<div class="list">${rows.map(r => `<div class="list-row"><span class="item-main"><strong>${h(r.name)}</strong><small>${dayLabel(r.date)}</small></span><strong class="amount expense">${fmt(r.amount)}</strong></div>`).join("")}</div><p class="muted small">カード一括払いの合計には含めていません。</p>`, { eyebrow: "REPAYMENT SCHEDULE" });
+}
+
 function renderList(app) {
   const { state } = app;
   const m = model(state);
   const total = sumBy(m.live, x => x.balance);
   const out = [];
   out.push(`<div class="section-heading"><div><p class="eyebrow">REPAYMENT</p><h2>返済</h2></div><button type="button" class="primary" data-action="add-debt">＋ 返済先</button></div>`);
+  out.push(cardPaymentsPanel(state));
+  out.push(renderOverview(app));
+  out.push(loanPaymentsPanel(state, m));
   if (!m.debts.length) {
     out.push(panel("返済先を登録しましょう", `<p class="muted">カード・ローンごとに、明細の残高・年利・毎月の返済額を登録すると、完済月と利息の見通しが出ます。返済したら ＋ で「返済」カテゴリを選んで記録すると、残高が減ります。</p>`));
   } else {
     out.push(`<div class="metrics">${metric("残債の合計", fmt(total), "expense")}${metric("毎月の返済（最低）", fmt(m.minTotal))}
-      ${metric("完済予定", m.plan.payable ? monthLabel(m.plan.payoffMonth) : "—")}${metric("これからの利息", m.plan.payable ? fmt(m.plan.totalInterest) : "—", "expense")}</div>`);
+      ${metric("完済予定", m.plan.payable ? monthLabel(m.plan.payoffMonth) : "—")}${metric("これからの利息", m.plan.payable ? fmt(m.plan.totalInterest) : "—", "expense")}
+      ${metric("今月の返済利息", fmt(sumBy(state.transactions.filter(t => monthOf(t.date) === monthOf(localDate())), t => t.interest || 0)), "expense")}</div>`);
     out.push(`<div class="debt-grid">${m.debts.map(d => {
       const it = m.items.find(x => x.id === d.id);
       const payoff = m.plan.perDebt.find(x => x.id === d.id)?.payoffMonth;
@@ -127,7 +162,7 @@ function renderList(app) {
   if (m.live.length) out.push(panel("シミュレーション", `
     <label class="field"><span class="field-label">毎月返済に回せる総額</span>
       <span class="sim-input"><input type="range" data-sim="repaymentBudget" min="${m.minTotal}" max="${Math.ceil(max / 1000) * 1000}" step="1000" value="${m.budget}" aria-label="毎月の返済総額（スライダー）">
-      <input type="text" inputmode="numeric" data-sim="repaymentBudget" value="${m.budget}" aria-label="毎月の返済総額"></span></label>
+      <input type="text" inputmode="numeric" data-sim="repaymentBudget" value="${m.budget.toLocaleString("ja-JP")}" aria-label="毎月の返済総額"></span></label>
     <div class="segmented small" role="radiogroup" aria-label="返済の作戦">
       <label><input type="radio" name="strategy" data-sim="strategy" value="avalanche" ${s.strategy !== "snowball" ? "checked" : ""}><span>金利の高い順</span></label>
       <label><input type="radio" name="strategy" data-sim="strategy" value="snowball" ${s.strategy === "snowball" ? "checked" : ""}><span>残高の少ない順</span></label>
