@@ -34,7 +34,7 @@ export function defaultState() {
     budgets: DEFAULT_BUDGETS.map(([n, amount]) => ({ categoryId: byName(n).id, amount })),
     recurring: [],
     debts: [],
-    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily", overviewBars: "both", overviewRange: "1y" },
+    settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily", overviewBars: "both", overviewRange: "1y", lock: null, lockAfter: 1 },
   };
 }
 
@@ -126,6 +126,9 @@ function sanitize(s) {
   if (!["daily", "monthly", "card", "category", "table"].includes(s.settings.recordsView)) s.settings.recordsView = "daily";
   if (!["both", "net"].includes(s.settings.overviewBars)) s.settings.overviewBars = "both";
   if (!["1y", "2y", "payoff"].includes(s.settings.overviewRange)) s.settings.overviewRange = "1y";
+  const lock = s.settings.lock;
+  s.settings.lock = lock && typeof lock.salt === "string" && typeof lock.hash === "string" ? { salt: lock.salt, hash: lock.hash, iterations: int(lock.iterations) || 200000 } : null;
+  if (![0, 1, 5].includes(s.settings.lockAfter)) s.settings.lockAfter = 1;
 }
 
 // 定期取引: 前回作成した月の翌月から、今日までに日付が来た月の分を作る。作成した件数を返す
@@ -166,4 +169,10 @@ export function load(storage = globalThis.localStorage) {
 
 export function save(state, storage = globalThis.localStorage) {
   storage.setItem(KEY, JSON.stringify(state));
+}
+
+// この端末のデータをすべて消す（PINを忘れたとき用）
+export function resetAll(storage = globalThis.localStorage) {
+  storage.removeItem(KEY);
+  storage.removeItem(V1_BACKUP_KEY);
 }

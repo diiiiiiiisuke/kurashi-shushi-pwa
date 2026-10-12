@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-10-12 Claude Code — セキュリティ強化（設定まで）
+
+**オーナーの依頼**: 今後 Codex を使うときは md を読んでもらって引き継ぐ。セキュリティ面が気になるので、安全を担保できるように設定まで行ってほしい
+
+**やったこと**
+- アプリ: **PINロック**（数字4〜8桁、PBKDF2 ハッシュのみ保存、自動ロック すぐ/1分/5分、5回ミスで待ち時間、ロック中は記録を描画しない、PINを忘れた場合はデータを消して最初から）
+- アプリ: **暗号化バックアップ**（パスワード8文字以上、AES-GCM 256bit・PBKDF2 60万回、読み込み時にパスワード入力。PIN のハッシュはバックアップに含めない）、「データを消す」
+- 自動チェック: `scripts/security-check.mjs` を `check.sh`（CI）に追加。外部通信 API・外部URL・eval・CSP の変更・インラインスクリプト・ワークフロー権限・未固定アクションを検出。テスト `tests/security.test.mjs`
+- CI: `permissions: contents: read`、`actions/checkout` をコミットSHAで固定、`persist-credentials: false`、setup-node をやめてランナーの Node を使用
+- `.github/pull_request_template.md`（セキュリティ確認欄）、`SECURITY.md`、`AGENTS.md` に「セキュリティのルール」、`docs/security.md` を全面更新（GitHub 側の設定手順つき）
+- `sw.js` CACHE v8
+
+**検証**
+- `bash scripts/check.sh` 成功（テスト42件、security: OK）
+- ブラウザで: 弱いPINの拒否 → PIN設定（保存データにPINの文字列なし）→ 今すぐロック（画面に記録が出ない）→ 間違ったPIN → 正しいPINで解除 → 再読み込みでロック → 短いパスワードの拒否 → 暗号化して書き出し（ファイルに平文・PINハッシュなし）→ 間違ったパスワードで読み込み失敗 → 正しいパスワードで216件復元・ロック設定は維持 → PIN解除。コンソールエラーなし
+
+**残課題（オーナー）**
+- `docs/security.md` 4章の GitHub 設定（main の保護ルールなど）。AI からは変更できない
+- アプリで PIN ロックをオンにする
+
 ## 2026-10-12 Claude Code — 普段使いと Codex での更新の流れを説明・記録
 
 - オーナーの質問: ホーム画面に追加すれば普段使いできるか／将来はスマホから Codex に指示するだけでアプリが更新されるようにしたい
