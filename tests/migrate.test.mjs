@@ -15,6 +15,40 @@ const v1 = {
   settings: { monthlyRepayment: 115000, annualRate: 18 },
 };
 
+test("新規の支出カテゴリに個人・変動費のカフェがある", () => {
+  const s = defaultState();
+  const cafe = s.categories.find(c => c.name === "カフェ" && c.type === "expense");
+  assert.ok(cafe);
+  assert.equal(cafe.group, "variable");
+  assert.equal(cafe.scope, "personal");
+  assert.equal(cafe.archived, false);
+  assert.ok(cafe.order < s.categories.find(c => c.name === "日用品").order);
+});
+
+test("既存データにもカフェを1件だけ追加し、記録とカテゴリIDを保持する", () => {
+  const s = defaultState();
+  s.categories = s.categories.filter(c => c.name !== "カフェ");
+  s.transactions = [{ id: "existing", date: "2026-10-13", type: "expense", amount: 1000, categoryId: s.categories[0].id, accountId: "cash" }];
+  const original = structuredClone(s);
+  const updated = migrate(structuredClone(s));
+  assert.deepEqual(updated.transactions, original.transactions);
+  assert.deepEqual(updated.categories.filter(c => c.name !== "カフェ"), original.categories);
+  assert.deepEqual(updated.budgets, original.budgets);
+  assert.equal(updated.categories.filter(c => c.name === "カフェ").length, 1);
+  assert.deepEqual(migrate(structuredClone(updated)), updated);
+});
+
+test("すでに追加済みのカフェは重複せず、非表示などの設定も保持する", () => {
+  const s = defaultState();
+  const cafe = s.categories.find(c => c.name === "カフェ");
+  cafe.id = "custom-cafe";
+  cafe.archived = true;
+  cafe.group = "fixed";
+  const updated = migrate(structuredClone(s));
+  assert.equal(updated.categories.filter(c => c.name === "カフェ").length, 1);
+  assert.deepEqual(updated.categories.find(c => c.name === "カフェ"), cafe);
+});
+
 test("8. v1 → v2: 件数・金額の合計が変わらない", () => {
   const s = migrate(structuredClone(v1), "2026-10-12");
   assert.equal(s.schemaVersion, 2);
