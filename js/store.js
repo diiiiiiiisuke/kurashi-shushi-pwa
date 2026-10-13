@@ -8,7 +8,7 @@ export const SCHEMA_VERSION = 2;
 export const CASH_ACCOUNT_ID = "cash";
 
 const DEFAULT_CATEGORIES = [
-  ["食費", "expense", "variable"], ["日用品", "expense", "variable"], ["交通費", "expense", "variable"],
+  ["食費", "expense", "variable"], ["カフェ", "expense", "variable"], ["日用品", "expense", "variable"], ["交通費", "expense", "variable"],
   ["交際費", "expense", "variable"], ["趣味・娯楽", "expense", "variable"], ["衣服・美容", "expense", "variable"],
   ["医療", "expense", "variable"], ["その他", "expense", "variable"],
   ["家賃", "expense", "fixed"], ["水道光熱費", "expense", "fixed"], ["通信費", "expense", "fixed"],
@@ -98,6 +98,11 @@ export function normalize(data) {
   const s = { ...d, ...data, settings: { ...d.settings, ...(data.settings || {}) } };
   for (const k of ["transactions", "categories", "accounts", "budgets", "recurring", "debts"]) if (!Array.isArray(s[k])) s[k] = d[k];
   if (!s.accounts.some(a => a.id === CASH_ACCOUNT_ID)) s.accounts.unshift(d.accounts[0]);
+  // 既存の端末にも新しい標準カテゴリを追加する。既存の同名カテゴリはそのまま使う。
+  if (!s.categories.some(c => c.type === "expense" && c.name === "カフェ")) {
+    const foodOrder = s.categories.find(c => c.type === "expense" && c.name === "食費")?.order;
+    s.categories = [...s.categories, newCategory("カフェ", "expense", "variable", {}, (Number.isFinite(foodOrder) ? foodOrder : 0) + 0.5)];
+  }
   s.schemaVersion = SCHEMA_VERSION;
   sanitize(s);
   return s;
