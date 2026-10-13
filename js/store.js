@@ -8,7 +8,7 @@ export const SCHEMA_VERSION = 2;
 export const CASH_ACCOUNT_ID = "cash";
 
 const DEFAULT_CATEGORIES = [
-  ["食費", "expense", "variable"], ["カフェ", "expense", "variable"], ["日用品", "expense", "variable"], ["交通費", "expense", "variable"],
+  ["食費", "expense", "variable"], ["カフェ", "expense", "variable"], ["コンビニ", "expense", "variable"], ["日用品", "expense", "variable"], ["交通費", "expense", "variable"],
   ["交際費", "expense", "variable"], ["趣味・娯楽", "expense", "variable"], ["衣服・美容", "expense", "variable"],
   ["医療", "expense", "variable"], ["その他", "expense", "variable"],
   ["家賃", "expense", "fixed"], ["水道光熱費", "expense", "fixed"], ["通信費", "expense", "fixed"],
@@ -102,6 +102,10 @@ export function normalize(data) {
   if (!s.categories.some(c => c.type === "expense" && c.name === "カフェ")) {
     const foodOrder = s.categories.find(c => c.type === "expense" && c.name === "食費")?.order;
     s.categories = [...s.categories, newCategory("カフェ", "expense", "variable", {}, (Number.isFinite(foodOrder) ? foodOrder : 0) + 0.5)];
+  }
+  if (!s.categories.some(c => c.type === "expense" && c.name === "コンビニ")) {
+    const cafeOrder = s.categories.find(c => c.type === "expense" && c.name === "カフェ")?.order;
+    s.categories = [...s.categories, newCategory("コンビニ", "expense", "variable", {}, (Number.isFinite(cafeOrder) ? cafeOrder : 0) + 0.25)];
   }
   s.schemaVersion = SCHEMA_VERSION;
   sanitize(s);
