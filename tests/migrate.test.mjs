@@ -108,3 +108,37 @@ test("細工したバックアップの数値欄は数値に直す", () => {
   assert.match(s.debts[0].baseDate, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(s.debts[0].method, "fixed");
 });
+
+
+test("新規カテゴリのコンビニは個人・変動費で、カフェの次に並ぶ", () => {
+  const s = defaultState();
+  const convenience = s.categories.find(c => c.name === "コンビニ");
+  assert.equal(convenience.type, "expense");
+  assert.equal(convenience.scope, "personal");
+  assert.equal(convenience.group, "variable");
+  assert.equal(convenience.archived, false);
+  assert.ok(convenience.order > s.categories.find(c => c.name === "カフェ").order);
+  assert.ok(convenience.order < s.categories.find(c => c.name === "日用品").order);
+});
+
+test("コンビニのない既存データに1件だけ追加して取引・カテゴリ・予算を保持する", () => {
+  const s = defaultState();
+  s.categories = s.categories.filter(c => c.name !== "コンビニ");
+  s.transactions = [{ id: "existing", date: "2026-10-13", type: "expense", amount: 1000, categoryId: s.categories[0].id, accountId: "cash" }];
+  const original = structuredClone(s);
+  const updated = migrate(structuredClone(s));
+  assert.equal(updated.categories.filter(c => c.name === "コンビニ").length, 1);
+  assert.deepEqual(updated.transactions, original.transactions);
+  assert.deepEqual(updated.categories.filter(c => c.name !== "コンビニ"), original.categories);
+  assert.deepEqual(updated.budgets, original.budgets);
+  assert.deepEqual(migrate(structuredClone(updated)), updated);
+});
+
+test("追加済みのコンビニのID・分類・非表示設定を上書きしない", () => {
+  const s = defaultState();
+  const c = s.categories.find(c => c.name === "コンビニ");
+  Object.assign(c, { id: "custom-convenience", group: "fixed", scope: "business", archived: true });
+  const updated = migrate(structuredClone(s));
+  assert.equal(updated.categories.filter(c => c.name === "コンビニ").length, 1);
+  assert.deepEqual(updated.categories.find(c => c.name === "コンビニ"), c);
+});
