@@ -122,6 +122,32 @@ const txKind = {
   },
 };
 
+// ───────── あとで買うもの ─────────
+const reminderKind = {
+  title: (app, o) => o.reminder ? "リマインドを編集" : "リマインドを追加",
+  html(app, o) {
+    const r = o.reminder;
+    const categories = app.state.categories.filter(c => c.type === "expense" && (!c.archived || c.id === r?.categoryId));
+    return `
+      ${field("あとで買うもの", `<input name="name" maxlength="80" required value="${h(r?.name || "")}" placeholder="例: 洗剤の詰め替え">`)}
+      ${field("カテゴリ（任意）", `<select name="categoryId"><option value="">指定しない</option>${options(categories, r?.categoryId)}</select>`)}
+      ${field("メモ（任意）", `<textarea name="memo" maxlength="200" rows="3" placeholder="例: 帰りに買う">${h(r?.memo || "")}</textarea>`)}
+      ${buttons(r ? deleteButton() : "")}`;
+  },
+  submit(app, o, d) {
+    const name = d.name.trim();
+    if (!name) return "あとで買うものを入力してください";
+    const values = { name, memo: d.memo.trim(), categoryId: d.categoryId || null };
+    if (o.reminder) Object.assign(o.reminder, values);
+    else app.state.reminders.push({ id: id(), createdAt: nowIso(), ...values });
+    app.toast(o.reminder ? "リマインドを更新しました" : "リマインドを追加しました");
+  },
+  remove(app, o) {
+    app.state.reminders = app.state.reminders.filter(r => r.id !== o.reminder.id);
+    app.toast("リマインドを削除しました");
+  },
+};
+
 // ───────── カテゴリ ─────────
 
 const categoryKind = {
@@ -429,7 +455,7 @@ const decryptBackupKind = {
   },
 };
 
-const KINDS = { pinSet: pinSetKind, pinOff: pinOffKind, quickBackup: quickBackupKind, exportBackup: exportBackupKind, encryptedReady: encryptedReadyKind, decryptBackup: decryptBackupKind, tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
+const KINDS = { reminder: reminderKind, pinSet: pinSetKind, pinOff: pinOffKind, quickBackup: quickBackupKind, exportBackup: exportBackupKind, encryptedReady: encryptedReadyKind, decryptBackup: decryptBackupKind, tx: txKind, category: categoryKind, account: accountKind, bulkAccount: bulkAccountKind, budget: budgetKind, recurring: recurringKind, debt: debtKind, rebase: rebaseKind };
 
 let current = null;
 

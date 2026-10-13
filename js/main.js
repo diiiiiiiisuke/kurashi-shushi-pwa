@@ -39,7 +39,7 @@ const app = {
   importData(raw) {
     const data = migrate(raw);
     if (!Array.isArray(data.transactions) || !data.transactions.every(t => t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && Number.isFinite(t.amount))) throw new Error("invalid");
-    if (!confirm(`記録 ${data.transactions.length} 件のバックアップを読み込みます。今のデータは置き換わります。よろしいですか？`)) return false;
+    if (!confirm(`記録 ${data.transactions.length} 件・リマインド ${data.reminders.length} 件のバックアップを読み込みます。今のデータは置き換わります。よろしいですか？`)) return false;
     data.settings.lock = app.state.settings.lock;
     data.settings.lockAfter = app.state.settings.lockAfter;
     app.state = data;
@@ -93,6 +93,8 @@ const actions = {
   "edit-tx": d => openSheet(app, "tx", { tx: find(app.state.transactions, d.id) }),
   "prev-month": () => { app.ctx.month = addMonths(app.ctx.month, -1); render(); },
   "next-month": () => { app.ctx.month = addMonths(app.ctx.month, 1); render(); },
+  "add-reminder": () => openSheet(app, "reminder"),
+  "edit-reminder": d => openSheet(app, "reminder", { reminder: find(app.state.reminders, d.id) }),
   "add-category": () => openSheet(app, "category"),
   "edit-category": d => openSheet(app, "category", { category: find(app.state.categories, d.id) }),
   "add-account": () => openSheet(app, "account"),
@@ -148,6 +150,13 @@ document.addEventListener("input", e => {
   if (overview) { overview.outerHTML = renderOverview(app); afterOverview(app); }
 });
 document.addEventListener("change", e => {
+  if (e.target.matches("[data-reminder-complete]") && e.target.checked) {
+    app.state.reminders = app.state.reminders.filter(r => r.id !== e.target.dataset.id);
+    app.commit();
+    app.toast("リマインドを削除しました");
+    document.querySelector('[data-action="add-reminder"]')?.focus({ preventScroll: true });
+    return;
+  }
   if (e.target.matches("[data-trend-unit]")) {
     app.ctx.trendUnit = e.target.value;
     render();

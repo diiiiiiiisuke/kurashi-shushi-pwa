@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { migrate, generateRecurring, defaultState, CASH_ACCOUNT_ID } from "../js/store.js";
+import { migrate, generateRecurring, defaultState, CASH_ACCOUNT_ID, SCHEMA_VERSION } from "../js/store.js";
 
 const v1 = {
   transactions: [
@@ -49,9 +49,9 @@ test("すでに追加済みのカフェは重複せず、非表示などの設�
   assert.deepEqual(updated.categories.find(c => c.name === "カフェ"), cafe);
 });
 
-test("8. v1 → v2: 件数・金額の合計が変わらない", () => {
+test("8. v1 → 最新形式: 件数・金額の合計が変わらない", () => {
   const s = migrate(structuredClone(v1), "2026-10-12");
-  assert.equal(s.schemaVersion, 2);
+  assert.equal(s.schemaVersion, SCHEMA_VERSION);
   assert.equal(s.transactions.length, 4);
   assert.equal(s.transactions.reduce((n, t) => n + t.amount, 0), 262000);
   const cat = id => s.categories.find(c => c.id === id);

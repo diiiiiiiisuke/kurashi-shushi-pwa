@@ -1,10 +1,10 @@
-// 保存・読み込み・v1 からの移行・定期取引の自動作成
+// 保存・読み込み・v1/v2 からの移行・定期取引の自動作成
 // migrate() と generateRecurring() は localStorage に触らない純粋関数（テスト対象）
 import { id, nowIso, localDate, addMonths, monthOf, dateInMonth } from "./util.js";
 
 export const KEY = "kurashi-shushi-data-v1";          // キー名は変えない（docs/decisions.md）
 export const V1_BACKUP_KEY = "kurashi-shushi-data-v1-backup";
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const CASH_ACCOUNT_ID = "cash";
 
 const DEFAULT_CATEGORIES = [
@@ -34,14 +34,15 @@ export function defaultState() {
     budgets: DEFAULT_BUDGETS.map(([n, amount]) => ({ categoryId: byName(n).id, amount })),
     recurring: [],
     debts: [],
+    reminders: [],
     settings: { repaymentBudget: 0, strategy: "avalanche", lastBackupAt: null, lastAccountId: CASH_ACCOUNT_ID, recordsView: "daily", overviewBars: "both", overviewRange: "1y", lock: null, lockAfter: 1, backupSnoozeUntil: null },
   };
 }
 
-// v1 形式 → v2 形式。v2 を渡したら欠けたキーを補うだけ（何度実行しても同じ結果）
+// v1 → 最新形式。v2以降は既存データを保持して、不足項目を補う。
 export function migrate(data, today = localDate()) {
   if (!data || typeof data !== "object") return defaultState();
-  if (data.schemaVersion >= SCHEMA_VERSION) return normalize(data);
+  if (data.schemaVersion >= 2) return normalize(data);
 
   const s = defaultState();
   const v1Settings = data.settings || {};
@@ -96,7 +97,7 @@ export function migrate(data, today = localDate()) {
 export function normalize(data) {
   const d = defaultState();
   const s = { ...d, ...data, settings: { ...d.settings, ...(data.settings || {}) } };
-  for (const k of ["transactions", "categories", "accounts", "budgets", "recurring", "debts"]) if (!Array.isArray(s[k])) s[k] = d[k];
+  for (const k of ["transactions", "categories", "accounts", "budgets", "recurring", "debts", "reminders"]) if (!Array.isArray(s[k])) s[k] = d[k];
   if (!s.accounts.some(a => a.id === CASH_ACCOUNT_ID)) s.accounts.unshift(d.accounts[0]);
   // 既存の端末にも新しい標準カテゴリを追加する。既存の同名カテゴリはそのまま使う。
   if (!s.categories.some(c => c.type === "expense" && c.name === "カフェ")) {
@@ -118,6 +119,20 @@ const intOrNull = v => (v == null || v === "" || !Number.isFinite(Number(v)) ? n
 const ymd = v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? String(v) : localDate());
 const ym = v => (/^\d{4}-\d{2}$/.test(String(v)) ? String(v) : null);
 function sanitize(s) {
+  const reminderIds = new Set();
+  s.reminders = s.reminders.filter(r => r && typeof r === "object" && !Array.isArray(r))
+    .map(r => {
+      const reminderId = typeof r.id === "string" && r.id && !reminderIds.has(r.id) ? r.id : id();
+      reminderIds.add(reminderId);
+      return {
+        id: reminderId,
+        name: String(r.name ?? "").trim().slice(0, 80),
+        memo: String(r.memo ?? "").trim().slice(0, 200),
+        categoryId: s.categories.some(c => c.id === r.categoryId) ? r.categoryId : null,
+        createdAt: typeof r.createdAt === "string" && !Number.isNaN(Date.parse(r.createdAt)) ? r.createdAt : nowIso(),
+      };
+    }).filter(r => r.name);
+
   for (const t of s.transactions) {
     t.date = ymd(t.date); t.amount = int(t.amount);
     if (t.debtId != null) { t.principal = int(t.principal); t.interest = int(t.interest); }
