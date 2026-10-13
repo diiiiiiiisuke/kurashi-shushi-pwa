@@ -1,7 +1,7 @@
 // ホーム: 今月の状況をひと目で
 import { fmt, signed, localDate, monthOf, monthLabel, sumBy } from "../util.js";
 import { monthTotals, budgetUsage } from "../calc/summary.js";
-import { h, panel, metric, bar, emptyNote, categoryName, txRow } from "./common.js";
+import { h, panel, metric, bar, emptyNote, categoryName } from "./common.js";
 import { backupBanner } from "./backup.js";
 
 export function renderHome(app) {
@@ -36,8 +36,18 @@ export function renderHome(app) {
       ${bar(b.ratio, b.rest < 0)}</div>`).join("") : emptyNote("予算が未設定です"),
     { eyebrow: "BUDGET", action: `<button type="button" class="link" data-view="settings">設定</button>` }));
 
-  const recent = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt?.localeCompare(a.createdAt)).slice(0, 5);
-  if (recent.length) out.push(panel("最近の記録", `<div class="list">${recent.map(x => txRow(state, x)).join("")}</div>`, { eyebrow: "RECENT", action: `<button type="button" class="link" data-view="records">すべて</button>` }));
+  const reminders = state.reminders || [];
+  const reminderRows = reminders.map(r => {
+    const description = [r.categoryId ? categoryName(state, r.categoryId) : "", r.memo].filter(Boolean).map(h).join(" · ");
+    return `<div class="reminder-row">
+      <label class="reminder-check"><input type="checkbox" data-reminder-complete data-id="${h(r.id)}" aria-label="${h(r.name)}を買ったので削除">
+        <span><strong>${h(r.name)}</strong>${description ? `<small>${description}</small>` : ""}</span>
+      </label>
+      <button type="button" class="icon-button" data-action="edit-reminder" data-id="${h(r.id)}" aria-label="${h(r.name)}を編集">✎</button>
+    </div>`;
+  }).join("");
+  out.push(panel("リマインド", `<p class="muted small">あとで買うもの。チェックすると削除されます。</p>
+    ${reminderRows || emptyNote("あとで買うものを追加しましょう")}`, { eyebrow: "REMIND", action: `<button type="button" class="primary" data-action="add-reminder">＋ 追加</button>` }));
 
   return out.join("");
 }
